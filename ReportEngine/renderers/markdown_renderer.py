@@ -9,13 +9,11 @@ from ReportEngine.utils.chart_review_service import get_chart_review_service
 
 
 class MarkdownRenderer:
-    """
-    将 Document IR 转为 Markdown。
+    """Convert Document IR to Markdown.
 
-    - 图表与词云统一降级为数据表格，避免丢失关键信息；
-    - 尽量保留通用特性（标题、列表、代码、表格、引用等）；
-    - 对不常见特性（callout/kpiGrid/engineQuote等）使用近似替换。
-    """
+    - Charts and word clouds are uniformly downgraded to data tables to avoid losing key information;
+    - Try to retain common features (titles, lists, codes, tables, references, etc.);
+    - Use approximate replacements for uncommon features (callout/kpiGrid/engineQuote, etc.)."""
 
     def __init__(self) -> None:
         self.document: Dict[str, Any] = {}
@@ -26,21 +24,19 @@ class MarkdownRenderer:
         document_ir: Dict[str, Any],
         ir_file_path: str | None = None
     ) -> str:
-        """
-        入口：将IR转换为Markdown字符串。
+        """Entry: Convert IR to Markdown string.
 
-        参数:
-            document_ir: Document IR 数据
-            ir_file_path: 可选，IR 文件路径，提供时修复后会自动保存
+        Parameters:
+            document_ir: Document IR data
+            ir_file_path: optional, IR file path, it will be automatically saved after repair when provided.
 
-        返回:
-            str: Markdown 字符串
-        """
+        Return:
+            str: Markdown string"""
         self.document = document_ir or {}
 
-        # 使用统一的 ChartReviewService 进行图表审查与修复
-        # 虽然 Markdown 渲染时图表会降级为表格，但仍需确保数据有效
-        # review_document 返回本次会话的统计信息（线程安全，此处不使用）
+        # Chart review and repair using unified ChartReviewService
+        # Although the chart will be downgraded to a table when rendered in Markdown, it is still necessary to ensure that the data is valid
+        # review_document returns the statistics of this session (thread-safe, not used here)
         chart_service = get_chart_review_service()
         _ = chart_service.review_document(
             self.document,
@@ -52,7 +48,7 @@ class MarkdownRenderer:
         self.metadata = self.document.get("metadata", {}) or {}
 
         parts: List[str] = []
-        title = self.metadata.get("title") or self.metadata.get("query") or "报告"
+        title = self.metadata.get("title") or self.metadata.get("query") or "Report"
         if title:
             parts.append(f"# {self._escape_text(title)}")
             parts.append("")
@@ -64,14 +60,14 @@ class MarkdownRenderer:
 
         return "\n".join(part for part in parts if part is not None).strip()
 
-    # ===== 章节与块级渲染 =====
+    # ===== Chapter and block-level rendering =====
 
     def _render_chapter(self, chapter: Dict[str, Any]) -> str:
         lines: List[str] = []
         title = chapter.get("title") or chapter.get("chapterId")
         blocks = chapter.get("blocks", []) if isinstance(chapter.get("blocks"), list) else []
 
-        # 章节标题使用一级标题格式，并避免与首个heading重复
+        # Chapter titles use first-level heading format and avoid duplication with the first heading
         if title:
             lines.append(f"# {self._escape_text(title)}")
             lines.append("")
@@ -141,25 +137,23 @@ class MarkdownRenderer:
         subtitle = block.get("subtitle")
         subtitle_text = f" _{self._escape_text(subtitle)}_" if subtitle else ""
         heading_line = f"{hashes} {self._escape_text(text)}{subtitle_text}"
-        # 章节内的一级标题前额外插入一个空行（不影响文档题目）
+        # Insert an extra blank line before the first-level title within the chapter (does not affect the document title)
         if level == 1:
             return f"\n\n\n\n\n{heading_line}"
         return heading_line
 
     def _render_paragraph(self, block: Dict[str, Any]) -> str:
         inlines = block.get("inlines", [])
-        # 检测并跳过包含文档元数据 JSON 的段落
+        # Detect and skip paragraphs containing document metadata JSON
         if self._is_metadata_paragraph(inlines):
             return ""
         return self._render_inlines(inlines)
 
     def _is_metadata_paragraph(self, inlines: List[Any]) -> bool:
-        """
-        检测段落是否只包含文档元数据 JSON。
+        """Detects whether a paragraph contains only document metadata JSON.
         
-        某些 LLM 生成的内容会将元数据（如 xrefs、widgets、footnotes、metadata）
-        错误地作为段落内容输出，本方法识别并标记这种情况以便跳过渲染。
-        """
+        Some LLM-generated content will contain metadata (such as xrefs, widgets, footnotes, metadata)
+        Incorrectly output as paragraph content, this method identifies and flags this case so that rendering can be skipped."""
         if not inlines or len(inlines) != 1:
             return False
         first = inlines[0]
@@ -171,7 +165,7 @@ class MarkdownRenderer:
         text = text.strip()
         if not text.startswith("{") or not text.endswith("}"):
             return False
-        # 检测典型的元数据键
+        # Detect typical metadata keys
         metadata_indicators = ['"xrefs"', '"widgets"', '"footnotes"', '"metadata"', '"sectionBudgets"']
         return any(indicator in text for indicator in metadata_indicators)
 
@@ -196,39 +190,37 @@ class MarkdownRenderer:
         return "\n".join(lines)
 
     def _flatten_nested_cells(self, cells: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        展平错误嵌套的单元格结构。
+        """Flatten incorrectly nested cell structures.
 
-        某些 LLM 生成的表格数据中，单元格被错误地递归嵌套：
-        cells[0] 正常, cells[1].cells[0] 正常, cells[1].cells[1].cells[0] 正常...
-        本方法将这种嵌套结构展平为标准的平行单元格数组。
+        In some LLM-generated tabular data, cells were incorrectly nested recursively:
+        cells[0] is normal, cells[1].cells[0] is normal, cells[1].cells[1].cells[0] is normal...
+        This method flattens this nested structure into a standard parallel cell array.
 
-        参数:
-            cells: 可能包含嵌套结构的单元格数组。
+        Parameters:
+            cells: A cell array that may contain nested structures.
 
-        返回:
-            List[Dict]: 展平后的单元格数组。
-        """
+        Return:
+            List[Dict]: Flattened cell array."""
         if not cells:
             return []
 
         flattened: List[Dict[str, Any]] = []
 
         def _extract_cells(cell_or_list: Any) -> None:
-            """递归提取所有单元格"""
+            """Extract all cells recursively"""
             if not isinstance(cell_or_list, dict):
                 return
 
-            # 如果当前对象有 blocks，说明它是一个有效的单元格
+            # If the current object has blocks, it means it is a valid cell
             if "blocks" in cell_or_list:
-                # 创建单元格副本，移除嵌套的 cells
+                # Create a copy of a cell, removing nested cells
                 clean_cell = {
                     k: v for k, v in cell_or_list.items()
                     if k != "cells"
                 }
                 flattened.append(clean_cell)
 
-            # 如果当前对象有嵌套的 cells，递归处理
+            # If the current object has nested cells, process it recursively
             nested_cells = cell_or_list.get("cells")
             if isinstance(nested_cells, list):
                 for nested_cell in nested_cells:
@@ -240,26 +232,24 @@ class MarkdownRenderer:
         return flattened
 
     def _fix_nested_table_rows(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        修复嵌套错误的表格行结构。
+        """Fix incorrectly nested table row structure.
 
-        某些 LLM 生成的表格数据中，所有行的单元格都被嵌套在第一行中，
-        导致表格只有1行但包含所有数据。本方法检测并修复这种情况。
+        In some tabular data generated by LLM, the cells of all rows are nested in the first row.
+        Resulting in a table with only 1 row but containing all data. This method detects and fixes this situation.
 
-        参数:
-            rows: 原始的表格行数组。
+        Parameters:
+            rows: original table row array.
 
-        返回:
-            List[Dict]: 修复后的表格行数组。
-        """
+        Return:
+            List[Dict]: Repaired table row array."""
         if not rows or len(rows) != 1:
-            # 只处理只有1行的异常情况
+            # Only handle exceptions with only 1 row
             return rows
 
         first_row = rows[0]
         original_cells = first_row.get("cells", [])
 
-        # 检查是否存在嵌套结构
+        # Check if nested structure exists
         has_nested = any(
             isinstance(cell.get("cells"), list)
             for cell in original_cells
@@ -269,16 +259,16 @@ class MarkdownRenderer:
         if not has_nested:
             return rows
 
-        # 展平所有单元格
+        # Flatten all cells
         all_cells = self._flatten_nested_cells(original_cells)
 
         if len(all_cells) <= 2:
-            # 单元格太少，不需要重组
+            # Too few cells, no need to reorganize
             return rows
 
-        # 辅助函数：获取单元格文本
+        # Helper function: get cell text
         def _get_cell_text(cell: Dict[str, Any]) -> str:
-            """获取单元格的文本内容"""
+            """Get the text content of a cell"""
             blocks = cell.get("blocks", [])
             for block in blocks:
                 if isinstance(block, dict) and block.get("type") == "paragraph":
@@ -291,19 +281,19 @@ class MarkdownRenderer:
             return ""
 
         def _is_placeholder_cell(cell: Dict[str, Any]) -> bool:
-            """判断单元格是否是占位符（如 '--', '-', '—' 等）"""
+            """Determine whether the cell is a placeholder (such as '--', '-', '—', etc.)"""
             text = _get_cell_text(cell)
             return text in ("--", "-", "—", "——", "", "N/A", "n/a")
 
-        # 先过滤掉占位符单元格
+        # Filter out the placeholder cells first
         all_cells = [c for c in all_cells if not _is_placeholder_cell(c)]
 
         if len(all_cells) <= 2:
             return rows
 
-        # 检测表头列数：查找带有 bold 标记或典型表头词的单元格
+        # Detect header column numbers: Find cells with bold markers or typical header words
         def _is_header_cell(cell: Dict[str, Any]) -> bool:
-            """判断单元格是否像表头（有加粗标记或是典型表头词）"""
+            """Determine whether the cell looks like a header (has a bold mark or a typical header word)"""
             blocks = cell.get("blocks", [])
             for block in blocks:
                 if isinstance(block, dict) and block.get("type") == "paragraph":
@@ -313,62 +303,62 @@ class MarkdownRenderer:
                             marks = inline.get("marks", [])
                             if any(isinstance(m, dict) and m.get("type") == "bold" for m in marks):
                                 return True
-            # 也检查典型的表头词
+            # Also check for typical header words
             text = _get_cell_text(cell)
             header_keywords = {
-                "时间", "日期", "名称", "类型", "状态", "数量", "金额", "比例", "指标",
-                "平台", "渠道", "来源", "描述", "说明", "备注", "序号", "编号",
-                "事件", "关键", "数据", "支撑", "反应", "市场", "情感", "节点",
-                "维度", "要点", "详情", "标签", "影响", "趋势", "权重", "类别",
-                "信息", "内容", "风格", "偏好", "主要", "用户", "核心", "特征",
-                "分类", "范围", "对象", "项目", "阶段", "周期", "频率", "等级",
+                "time", "date", "name", "type", "state", "quantity", "Amount", "Proportion", "index",
+                "platform", "channel", "source", "describe", "illustrate", "Remark", "serial number", "serial number",
+                "event", "key", "data", "support", "reaction", "market", "emotion", "node",
+                "Dimensions", "Main points", "Details", "Label", "Influence", "trend", "weight", "category",
+                "information", "content", "style", "Preference", "main", "user", "core", "feature",
+                "Classification", "scope", "object", "project", "stage", "cycle", "frequency", "grade",
             }
             return any(kw in text for kw in header_keywords) and len(text) <= 20
 
-        # 计算表头列数：统计连续的表头单元格数量
+        # Calculate the number of header columns: count the number of consecutive header cells
         header_count = 0
         for cell in all_cells:
             if _is_header_cell(cell):
                 header_count += 1
             else:
-                # 遇到第一个非表头单元格，说明数据区开始
+                # Encountering the first non-header cell indicates the beginning of the data area
                 break
 
-        # 如果没有检测到表头，尝试使用启发式方法
+        # If no header is detected, try using heuristics
         if header_count == 0:
-            # 假设列数为 4 或 5（常见的表格列数）
+            # Assume the number of columns is 4 or 5 (common table column numbers)
             total = len(all_cells)
             for possible_cols in [4, 5, 3, 6, 2]:
                 if total % possible_cols == 0:
                     header_count = possible_cols
                     break
             else:
-                # 尝试找到最接近的能整除的列数
+                # Try to find the closest number of columns that is divisible
                 for possible_cols in [4, 5, 3, 6, 2]:
                     remainder = total % possible_cols
-                    # 允许最多3个多余的单元格（可能是尾部的总结或注释）
+                    # Allow up to 3 extra cells (possibly summary or comments at the end)
                     if remainder <= 3:
                         header_count = possible_cols
                         break
                 else:
-                    # 无法确定列数，返回原始数据
+                    # Unable to determine number of columns, return original data
                     return rows
 
-        # 计算有效的单元格数量（可能需要截断尾部多余的单元格）
+        # Calculate the number of valid cells (you may need to truncate excess cells at the end)
         total = len(all_cells)
         remainder = total % header_count
         if remainder > 0 and remainder <= 3:
-            # 截断尾部多余的单元格（可能是总结或注释）
+            # Truncate excess cells at the end (maybe summary or comments)
             all_cells = all_cells[:total - remainder]
         elif remainder > 3:
-            # 余数太大，可能列数检测错误，返回原始数据
+            # The remainder is too large, the number of columns may be detected incorrectly, and the original data is returned.
             return rows
 
-        # 重新组织成多行
+        # Reorganize into multiple lines
         fixed_rows: List[Dict[str, Any]] = []
         for i in range(0, len(all_cells), header_count):
             row_cells = all_cells[i:i + header_count]
-            # 标记第一行为表头
+            # Mark the first row as header
             if i == 0:
                 for cell in row_cells:
                     cell["header"] = True
@@ -381,20 +371,20 @@ class MarkdownRenderer:
         if not raw_rows:
             return ""
 
-        # 先修复可能存在的嵌套行结构问题
+        # First fix possible nested row structure issues
         rows = self._fix_nested_table_rows(raw_rows)
 
         header_cells: List[str] = []
         body_rows: List[List[str]] = []
 
-        # 展平可能存在的嵌套单元格结构（作为额外保护）
+        # Flatten possible nested cell structures (as extra protection)
         first_row_cells_raw = rows[0].get("cells") if isinstance(rows[0], dict) else None
         first_row_cells = self._flatten_nested_cells(first_row_cells_raw) if first_row_cells_raw else None
 
-        # 检测首行是否声明为表头
+        # Check whether the first row is declared as a table header
         has_header = bool(first_row_cells and any(cell.get("header") or cell.get("isHeader") for cell in first_row_cells))
 
-        # 计算最大列数，忽略rowspan
+        # Calculate the maximum number of columns, ignoring rowspan
         col_count = 0
         for row in rows:
             cells_raw = row.get("cells") if isinstance(row, dict) else None
@@ -408,13 +398,13 @@ class MarkdownRenderer:
             header_cells = [self._render_cell_content(cell) for cell in first_row_cells]
             rows = rows[1:]
         else:
-            header_cells = [f"列{idx + 1}" for idx in range(col_count or (len(first_row_cells or []) or 1))]
+            header_cells = [f"Column {idx + 1}" for idx in range(col_count or (len(first_row_cells or []) or 1))]
 
         for row in rows:
             if not isinstance(row, dict):
                 continue
             cells_raw = row.get("cells") or []
-            # 展平可能存在的嵌套单元格结构
+            # Flatten possible nested cell structures
             cells = self._flatten_nested_cells(cells_raw)
             row_cells: List[str] = []
             for cell in cells:
@@ -436,13 +426,13 @@ class MarkdownRenderer:
         return "\n".join(lines)
 
     def _render_swot_table(self, block: Dict[str, Any]) -> str:
-        title = block.get("title") or "SWOT 分析"
+        title = block.get("title") or "SWOT analysis"
         summary = block.get("summary")
         quadrants = [
-            ("strengths", "S 优势"),
-            ("weaknesses", "W 劣势"),
-            ("opportunities", "O 机会"),
-            ("threats", "T 威胁"),
+            ("strengths", "S Advantages"),
+            ("weaknesses", "W Disadvantage"),
+            ("opportunities", "O opportunity"),
+            ("threats", "Threat"),
         ]
 
         lines = [f"### {self._escape_text(title)}"]
@@ -453,10 +443,10 @@ class MarkdownRenderer:
             items = self._normalize_swot_items(block.get(key))
             lines.append(f"#### {label}")
             if not items:
-                lines.append("> 暂无数据")
+                lines.append("> No data yet")
                 continue
             table_lines = [
-                self._markdown_row(["序号", "要点", "详情", "标签"]),
+                self._markdown_row(["serial number", "Main points", "Details", "Label"]),
                 self._markdown_separator(4),
             ]
             for idx, item in enumerate(items, start=1):
@@ -466,7 +456,7 @@ class MarkdownRenderer:
                 table_lines.append(
                     self._markdown_row([
                         str(idx),
-                        self._escape_text(item.get("title") or "未命名要点", for_table=True),
+                        self._escape_text(item.get("title") or "unnamed points", for_table=True),
                         self._escape_text(detail, for_table=True),
                         self._escape_text(tag_text, for_table=True),
                     ])
@@ -475,13 +465,13 @@ class MarkdownRenderer:
         return "\n\n".join(lines)
 
     def _render_pest_table(self, block: Dict[str, Any]) -> str:
-        title = block.get("title") or "PEST 分析"
+        title = block.get("title") or "PEST analysis"
         summary = block.get("summary")
         dimensions = [
-            ("political", "P 政治"),
-            ("economic", "E 经济"),
-            ("social", "S 社会"),
-            ("technological", "T 技术"),
+            ("political", "Politics"),
+            ("economic", "Economy"),
+            ("social", "Society"),
+            ("technological", "T technology"),
         ]
 
         lines = [f"### {self._escape_text(title)}"]
@@ -492,10 +482,10 @@ class MarkdownRenderer:
             items = self._normalize_pest_items(block.get(key))
             lines.append(f"#### {label}")
             if not items:
-                lines.append("> 暂无数据")
+                lines.append("> No data yet")
                 continue
             table_lines = [
-                self._markdown_row(["序号", "要点", "详情", "标签"]),
+                self._markdown_row(["serial number", "Main points", "Details", "Label"]),
                 self._markdown_separator(4),
             ]
             for idx, item in enumerate(items, start=1):
@@ -505,7 +495,7 @@ class MarkdownRenderer:
                 table_lines.append(
                     self._markdown_row([
                         str(idx),
-                        self._escape_text(item.get("title") or "未命名要点", for_table=True),
+                        self._escape_text(item.get("title") or "unnamed points", for_table=True),
                         self._escape_text(detail, for_table=True),
                         self._escape_text(tag_text, for_table=True),
                     ])
@@ -518,7 +508,7 @@ class MarkdownRenderer:
         return self._quote_lines(inner)
 
     def _render_engine_quote(self, block: Dict[str, Any]) -> str:
-        title = block.get("title") or block.get("engine") or "引用"
+        title = block.get("title") or block.get("engine") or "Quote"
         inner = self._render_blocks(block.get("blocks", []))
         header = f"**{self._escape_text(title)}**"
         return self._quote_lines(f"{header}\n{inner}" if inner else header)
@@ -535,8 +525,8 @@ class MarkdownRenderer:
         return f"$$\n{latex}\n$$"
 
     def _render_figure(self, block: Dict[str, Any]) -> str:
-        caption = block.get("caption") or "图像内容占位"
-        return f"> ![图示占位]({''}) {self._escape_text(caption)}"
+        caption = block.get("caption") or "Image content placeholder"
+        return f"> ![Image placeholder]({''}) {self._escape_text(caption)}"
 
     def _render_callout(self, block: Dict[str, Any]) -> str:
         tone = block.get("tone") or "info"
@@ -550,7 +540,7 @@ class MarkdownRenderer:
         items = block.get("items") or []
         if not items:
             return ""
-        header = ["指标", "数值", "变化"]
+        header = ["index", "numerical value", "change"]
         lines = [self._markdown_row(header), self._markdown_separator(len(header))]
         for item in items:
             label = item.get("label") or ""
@@ -580,20 +570,20 @@ class MarkdownRenderer:
             data_preview = json.dumps(block.get("data") or {}, ensure_ascii=False)[:200]
         except Exception:
             data_preview = ""
-        note = "> 数据组件暂不支持Markdown渲染"
+        note = "> Data component does not support Markdown rendering yet"
         return f"{title_prefix}{note}" + (f"\n\n```\n{data_preview}\n```" if data_preview else "")
 
-    # ===== 工具方法 =====
+    # ===== Tool methods =====
 
     def _render_chart_as_table(self, block: Dict[str, Any]) -> str:
         data = self._coerce_chart_data(block.get("data") or {})
         labels = data.get("labels") or []
         datasets = data.get("datasets") or []
         if not labels or not datasets:
-            return "> 图表数据缺失，无法转为表格"
+            return "> Chart data is missing and cannot be converted into a table"
 
-        headers = ["类别"] + [
-            ds.get("label") or f"系列{idx + 1}"
+        headers = ["category"] + [
+            ds.get("label") or f"Series {idx + 1}"
             for idx, ds in enumerate(datasets)
         ]
         lines = [self._markdown_row(headers), self._markdown_separator(len(headers))]
@@ -609,10 +599,10 @@ class MarkdownRenderer:
     def _render_wordcloud_as_table(self, block: Dict[str, Any]) -> str:
         items = self._collect_wordcloud_items(block)
         if not items:
-            return "> 词云数据缺失，无法转为表格"
+            return "> Word cloud data is missing and cannot be converted into a table"
 
         lines = [
-            self._markdown_row(["关键词", "权重", "类别"]),
+            self._markdown_row(["keywords", "weight", "category"]),
             self._markdown_separator(3),
         ]
         for item in items:
@@ -655,7 +645,7 @@ class MarkdownRenderer:
         if block_type == "code":
             return block.get("content", "") or ""
         if block_type == "widget":
-            return self._escape_text(block.get("title") or "图表", for_table=True)
+            return self._escape_text(block.get("title") or "chart", for_table=True)
         if isinstance(block.get("blocks"), list):
             return self._render_blocks_as_text(block.get("blocks"))
         return self._escape_text(str(block), for_table=True)
@@ -674,13 +664,13 @@ class MarkdownRenderer:
 
     def _render_inline_run(self, run: Any, for_table: bool = False) -> str:
         if isinstance(run, dict):
-            # 处理 inlineRun 类型：嵌套的 inlines 数组
+            # Handling inlineRun types: nested inlines arrays
             if run.get("type") == "inlineRun":
                 inner_inlines = run.get("inlines") or []
                 outer_marks = run.get("marks") or []
-                # 递归渲染内部的 inlines
+                # Recursively render internal inlines
                 inner_text = self._render_inlines(inner_inlines, for_table=for_table)
-                # 应用外层的 marks
+                # Apply outer marks
                 result = inner_text
                 for mark in outer_marks:
                     result = self._apply_mark(result, mark)
@@ -691,7 +681,7 @@ class MarkdownRenderer:
             text = run if isinstance(run, str) else ""
             marks = []
         
-        # 尝试检测并解析被错误序列化为字符串的 inlineRun JSON
+        # Try to detect and parse inlineRun JSON that is incorrectly serialized as a string
         if isinstance(text, str) and text.startswith('{"type": "inlineRun"'):
             parsed = self._try_parse_inline_run_string(text)
             if parsed:
@@ -725,15 +715,13 @@ class MarkdownRenderer:
             elif mtype == "math":
                 latex = self._normalize_math(mark.get("value") or text)
                 result = f"${latex}$" if latex else result
-            # 颜色/字体等非通用标记直接降级为纯文本
+            # Non-universal tags such as colors/fonts are directly downgraded to plain text
         return result
 
     def _apply_mark(self, text: str, mark: Any) -> str:
-        """
-        对文本应用单个 mark 格式。
+        """Applies single mark formatting to text.
         
-        用于处理 inlineRun 类型的外层 marks。
-        """
+        Used to handle outer marks of type inlineRun."""
         if not isinstance(mark, dict):
             return text
         mtype = mark.get("type")
@@ -763,18 +751,16 @@ class MarkdownRenderer:
         return text
 
     def _try_parse_inline_run_string(self, text: str) -> dict | None:
-        """
-        尝试解析被错误序列化为字符串的 inlineRun JSON。
+        """Attempt to parse inlineRun JSON that was incorrectly serialized to a string.
         
-        某些 LLM 生成的内容会将 inlineRun 结构意外地作为字符串
-        存入 text 字段，本方法尝试识别并解析这种情况。
+        Some LLM generated content unexpectedly treats inlineRun structures as strings
+        Stored in the text field, this method attempts to identify and resolve this situation.
         
-        参数:
-            text: 可能包含 JSON 的字符串
+        Parameters:
+            text: A string that may contain JSON
             
-        返回:
-            dict | None: 解析成功返回 inlineRun 字典，否则返回 None
-        """
+        Return:
+            dict | None: Returns the inlineRun dictionary if the parsing is successful, otherwise returns None"""
         if not text or not isinstance(text, str):
             return None
         text = text.strip()
@@ -789,7 +775,7 @@ class MarkdownRenderer:
         return None
 
     def _is_heading_duplicate(self, block: Dict[str, Any], chapter_title: str | None) -> bool:
-        """判断首个heading是否与章节标题重复"""
+        """Determine whether the first heading is a duplicate of the chapter title"""
         if not isinstance(block, dict) or block.get("type") != "heading":
             return False
         if not chapter_title:
@@ -798,11 +784,11 @@ class MarkdownRenderer:
         return self._normalize_heading_text(heading_text) == self._normalize_heading_text(chapter_title)
 
     def _normalize_heading_text(self, text: Any) -> str:
-        """去除序号前缀并统一空白"""
+        """Remove serial number prefix and unify blank spaces"""
         if not isinstance(text, str):
             return ""
         stripped = text.strip()
-        # 去掉类似“1.”、“1.1”、“一、”
+        # Remove similar "1.", "1.1", "一,"
         for sep in (" ", "、"):
             if sep in stripped:
                 maybe_prefix, rest = stripped.split(sep, 1)
@@ -817,12 +803,12 @@ class MarkdownRenderer:
 
     @staticmethod
     def _looks_like_prefix(token: str) -> bool:
-        """判断token是否像序号前缀"""
+        """Determine whether the token is like a serial number prefix"""
         if not token:
             return False
         if token.isdigit():
             return True
-        chinese_numerals = set("一二三四五六七八九十零〇壹贰叁肆伍陆柒捌玖拾")
+        chinese_numerals = set("One, two, three, four, five, six, seven, eight, nine, zero, one, two, three, four, five, six, eight, nine, ten")
         return all(ch in chinese_numerals or ch == "." for ch in token)
 
     def _quote_lines(self, text: str) -> str:
@@ -849,7 +835,7 @@ class MarkdownRenderer:
                 priority = entry.get("priority")
                 evidence = entry.get("evidence")
                 items.append({
-                    "title": title or "未命名要点",
+                    "title": title or "unnamed points",
                     "detail": detail,
                     "impact": impact,
                     "priority": priority,
@@ -868,7 +854,7 @@ class MarkdownRenderer:
                 title = entry.get("title") or entry.get("label") or entry.get("text")
                 detail = entry.get("detail") or entry.get("description")
                 items.append({
-                    "title": title or "未命名要点",
+                    "title": title or "unnamed points",
                     "detail": detail,
                     "impact": entry.get("impact"),
                     "priority": entry.get("priority"),
@@ -945,7 +931,7 @@ class MarkdownRenderer:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             return str(value)
         if isinstance(value, dict):
-            # 优先取常见数值字段
+            # Prioritize common numerical fields
             for key in ("y", "value"):
                 if key in value:
                     return str(value[key])
@@ -987,7 +973,7 @@ class MarkdownRenderer:
             payload = json.dumps(block, ensure_ascii=False, indent=2)
         except Exception:
             payload = str(block)
-        logger.debug(f"未识别的区块类型，使用JSON兜底: {block}")
+        logger.debug(f"Unrecognized block type, use JSON to find out: {block}")
         return f"```json\n{payload}\n```"
 
 

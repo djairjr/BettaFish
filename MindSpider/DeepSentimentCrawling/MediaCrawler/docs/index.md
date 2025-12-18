@@ -1,77 +1,77 @@
-# MediaCrawler使用方法
+# How to use MediaCrawler
 
-## 创建并激活 python 虚拟环境
-> 如果是爬取抖音和知乎，需要提前安装nodejs环境，版本大于等于：`16`即可 <br>
+## Create and activate python virtual environment
+> If you are crawling Douyin and Zhihu, you need to install the nodejs environment in advance. The version is greater than or equal to: `16` <br>
    ```shell   
-   # 进入项目根目录
+# Enter the project root directory
    cd MediaCrawler
    
-   # 创建虚拟环境
-   # 我的python版本是：3.9.6，requirements.txt中的库是基于这个版本的，如果是其他python版本，可能requirements.txt中的库不兼容，自行解决一下。
+#Create virtual environment
+# My python version is: 3.9.6. The library in requirements.txt is based on this version. If it is other python versions, the library in requirements.txt may not be compatible. Please solve it yourself.
    python -m venv venv
    
-   # macos & linux 激活虚拟环境
+# macos & linux activate virtual environment
    source venv/bin/activate
 
-   # windows 激活虚拟环境
+# windows activate virtual environment
    venv\Scripts\activate
 
    ```
 
-## 安装依赖库
+## Install dependent libraries
 
    ```shell
    pip install -r requirements.txt
    ```
 
-## 安装 playwright浏览器驱动
+## Install playwright browser driver
 
    ```shell
    playwright install
    ```
 
-## 运行爬虫程序
+## Run the crawler program
 
    ```shell
-   ### 项目默认是没有开启评论爬取模式，如需评论请在config/base_config.py中的 ENABLE_GET_COMMENTS 变量修改
-   ### 一些其他支持项，也可以在config/base_config.py查看功能，写的有中文注释
+### By default, the comment crawling mode is not enabled for the project. If you need to comment, please modify the ENABLE_GET_COMMENTS variable in config/base_config.py
+### For some other support items, you can also view the functions in config/base_config.py, which are written with Chinese comments.
    
-   # 从配置文件中读取关键词搜索相关的帖子并爬取帖子信息与评论
+# Read keywords from the configuration file to search for related posts and crawl post information and comments
    python main.py --platform xhs --lt qrcode --type search
    
-   # 从配置文件中读取指定的帖子ID列表获取指定帖子的信息与评论信息
+# Read the specified post ID list from the configuration file to obtain the information and comment information of the specified post.
    python main.py --platform xhs --lt qrcode --type detail
    
-   # 使用SQLite数据库存储数据（推荐个人用户使用）
+# Use SQLite database to store data (recommended for individual users)
    python main.py --platform xhs --lt qrcode --type search --save_data_option sqlite
    
-   # 使用MySQL数据库存储数据
+# Use MySQL database to store data
    python main.py --platform xhs --lt qrcode --type search --save_data_option db
   
-   # 打开对应APP扫二维码登录
+# Open the corresponding APP and scan the QR code to log in
      
-   # 其他平台爬虫使用示例，执行下面的命令查看
+# For other platform crawler usage examples, execute the following command to view
    python main.py --help    
    ```
 
-## 💾 数据存储
+## 💾 Data storage
 
-支持多种数据存储方式：
-- **CSV 文件**: 支持保存至 CSV (位于 `data/` 目录下)
-- **JSON 文件**: 支持保存至 JSON (位于 `data/` 目录下)
-- **数据库存储**
-  - 使用 `--init_db` 参数进行数据库初始化 (使用 `--init_db` 时，无需其他可选参数)
-  - **SQLite 数据库**: 轻量级数据库，无需服务器，适合个人使用 (推荐)
-    1. 初始化: `--init_db sqlite`
-    2. 数据存储: `--save_data_option sqlite`
-  - **MySQL 数据库**: 支持保存至关系型数据库 MySQL (需提前创建数据库)
-    1. 初始化: `--init_db mysql`
-    2. 数据存储: `--save_data_option db` (db 参数为兼容历史更新保留)
+Supports multiple data storage methods:
+- **CSV file**: supports saving to CSV (located in the `data/` directory)
+- **JSON file**: supports saving to JSON (located in the `data/` directory)
+- **Database Storage**
+- Use the `--init_db` parameter for database initialization (no other optional parameters are required when using `--init_db`)
+- **SQLite database**: lightweight database, no server required, suitable for personal use (recommended)
+1. Initialization: `--init_db sqlite`
+2. Data storage: `--save_data_option sqlite`
+- **MySQL database**: Supports saving to relational database MySQL (database needs to be created in advance)
+1. Initialization: `--init_db mysql`
+2. Data storage: `--save_data_option db` (the db parameter is reserved for compatibility with historical updates)
 
-## 免责声明
-> **免责声明：**
+## Disclaimer
+> **Disclaimer:**
 > 
-> 大家请以学习为目的使用本仓库，爬虫违法违规的案件：https://github.com/HiddenStrawberry/Crawler_Illegal_Cases_In_China  <br>
+> Please use this repository for the purpose of learning. Cases of illegal crawlers: https://github.com/HiddenStrawberry/Crawler_Illegal_Cases_In_China <br>
 >
->本项目的所有内容仅供学习和参考之用，禁止用于商业用途。任何人或组织不得将本仓库的内容用于非法用途或侵犯他人合法权益。本仓库所涉及的爬虫技术仅用于学习和研究，不得用于对其他平台进行大规模爬虫或其他非法行为。对于因使用本仓库内容而引起的任何法律责任，本仓库不承担任何责任。使用本仓库的内容即表示您同意本免责声明的所有条款和条件。
+>All contents of this project are for learning and reference only and are not allowed to be used for commercial purposes. No person or organization may use the contents of this warehouse for illegal purposes or infringe upon the legitimate rights and interests of others. The crawler technology involved in this warehouse is only used for learning and research, and may not be used to conduct large-scale crawling of other platforms or other illegal activities. This warehouse does not assume any responsibility for any legal liability arising from the use of the contents of this warehouse. By using the content of this repository, you agree to all terms and conditions of this disclaimer.
 

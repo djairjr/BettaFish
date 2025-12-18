@@ -1,7 +1,5 @@
-"""
-Prompt模块
-定义Deep Search Agent各个阶段使用的系统提示词
-"""
+"""Prompt module
+Define the system prompt words used in each stage of Deep Search Agent"""
 
 from .prompts import (
     SYSTEM_PROMPT_REPORT_STRUCTURE,

@@ -1,8 +1,6 @@
-"""
-Report Engine状态管理模块。
+"""Report Engine status management module.
 
-导出 ReportState/ReportMetadata，供Agent与Flask接口共享。
-"""
+Export ReportState/ReportMetadata for sharing between Agent and Flask interface."""
 
 from .state import ReportState, ReportMetadata
 

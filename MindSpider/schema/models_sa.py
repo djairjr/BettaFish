@@ -1,10 +1,8 @@
-"""
-MindSpider 数据库ORM模型（SQLAlchemy 2.x）
+"""MindSpider database ORM model (SQLAlchemy 2.x)
 
-此模块定义 MindSpider 扩展表（与原 MediaCrawler 表解耦）的 ORM 模型。
-数据模型定义位置：
-- 本文件（MindSpider/schema/models_sa.py）
-"""
+This module defines the ORM model for the MindSpider extension table (decoupled from the original MediaCrawler table).
+Data model definition location:
+- This file (MindSpider/schema/models_sa.py)"""
 
 from __future__ import annotations
 
@@ -31,7 +29,7 @@ class Base(DeclarativeBase):
 class DailyNews(Base):
     __tablename__ = "daily_news"
     __table_args__ = (
-        UniqueConstraint("news_id", name="uq_daily_news_id_unique"),  # 为外键引用添加唯一约束
+        UniqueConstraint("news_id", name="uq_daily_news_id_unique"),  # Add unique constraints to foreign key references
         UniqueConstraint("news_id", "source_platform", "crawl_date", name="uq_daily_news_unique"),
         Index("idx_daily_news_date", "crawl_date"),
         Index("idx_daily_news_platform", "source_platform"),
@@ -54,7 +52,7 @@ class DailyNews(Base):
 class DailyTopic(Base):
     __tablename__ = "daily_topics"
     __table_args__ = (
-        UniqueConstraint("topic_id", name="uq_daily_topics_id_unique"),  # 为外键引用添加唯一约束
+        UniqueConstraint("topic_id", name="uq_daily_topics_id_unique"),  # Add unique constraints to foreign key references
         UniqueConstraint("topic_id", "extract_date", name="uq_daily_topics_unique"),
         Index("idx_daily_topics_date", "extract_date"),
         Index("idx_daily_topics_status", "processing_status"),

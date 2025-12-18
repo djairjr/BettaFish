@@ -1,82 +1,82 @@
-# 珞珈山舆情全景报告  
-**“百年名校的骄傲、焦虑与烟火气”**  
-> 数据周期：2024-03-01 至 2024-04-30  
-> 监测平台：微博、抖音、B 站、小红书、知乎、贴吧、树洞等 12 个信源  
-> 情感样本：≈ 210 万条有效文本、3.8 亿次阅读、420 万条互动
+#垞佳山 Public Opinion Panoramic Report
+**"The pride, anxiety and fireworks of a century-old prestigious school"**
+> Data period: 2024-03-01 to 2024-04-30
+> Monitoring platform: Weibo, Douyin, Bilibili, Xiaohongshu, Zhihu, Tieba, Shudong and other 12 sources
+> Emotional samples: ≈ 2.1 million valid texts, 380 million reads, 4.2 million interactions
 
 ---
 
-## 一、百年校史：从“薛定谔的起点”到“共享的青春现场”
+## 1. Centenary History of the School: From “Schrödinger’s Starting Point” to “Shared Youth Scene”
 
-| 维度 | 高光片段 | 争议点 | 情绪占比 |
+| Dimensions | Highlight clips | Controversial points | Emotion ratio |
 |---|---|---|---|
-| 1893 VS 1913 | 抖音#国立武汉大学门楼# 1.2 万条模仿“学大汉武立国”倒读梗 | 贴吧“80 周年还是 100 周年”贴 15 页楼，**“荒诞”21%** | 自豪 38% / 吐槽 34% |
-| 樱花季 | 微博#武大樱花预约# 3.8 亿阅读 | “抢票像春运”暴躁 34%，安慰陌生人 27% | 浪漫 42% / 焦虑 28% |
-| 校友记忆 | 知乎匿名答 2.7 万赞：*“百年光阴也就一坡之隔”* | 00 后主播带货雪糕：“母校变景点？” | 怀旧 45% / 商业化 21% |
+| 1893 VS 1913 | Douyin #国武汉大学门楼# 12,000 memes imitating the backward reading of "Learn from the great Han Wu Liguo" | Tieba "80th anniversary or 100th anniversary" posted on page 15, **"absurd" 21%** | Pride 38% / Complaints 34% |
+| Cherry Blossom Season | Weibo #武大 Cherry Blossom Appointment# 380 million reads | "Grabbing for tickets is like Spring Festival travel" 34% are irritable, comforting strangers 27% | Romance 42% / Anxiety 28% |
+| Alumni memories | Zhihu anonymous answer 27,000 likes: *"A hundred years are only separated by a slope"* | Post-00s anchor sells ice cream: "Has the alma mater become a tourist attraction?" | Nostalgia 45% / Commercialization 21% |
 
-> **结论**：历史是武大人共同的“开放剧本”，人人可改台词，却从未离场。
+> **Conclusion**: History is an "open script" shared by Wuhan University people. Everyone can change the lines, but they never leave the scene.
 
 ---
 
-## 二、学科与科研：从“世界第一”到“工资条沉默”
+## 2. Disciplines and scientific research: from “No. 1 in the world” to “Salary silence”
 
-| 学科 | 高光叙事 | 焦虑痛点 | 情感走势 |
+| Subject | Highlight Narrative | Anxiety Pain Points | Emotional Trends |
 |---|---|---|---|
-| **测绘遥感** | 知乎“世界第一”4.5 万赞 | 硕士春招中位数 7.2k，“买不起武汉一平米” | 自豪↓55%→51% / 焦虑↑17%→24% |
-| **法学** | 省考“双第一”报喜九宫格 | 红圈所实习 5k 不包宿，“法学生的温柔铠甲”裂缝 | 温情↓18%→14% / 考公↑6%→11% |
-| **口腔医学** | B 站“阿牙”拔牙 300 万播 | 规培时薪 < 奶茶店，“连筷子都拿不稳” | 信赖 12%→10% / 规培累 5%→9% |
-| **病毒学** | 抖音“00 后通宵 WB”120 万赞 | 后台 3.7% 私信含“猝死”关键词 | 敬意 8%→6% / 科研高压 5% |
+| **Surveying, mapping and remote sensing** | Zhihu "No. 1 in the world" 45,000 likes | The median spring recruitment for master's degree is 7.2k, "can't afford one square meter in Wuhan" | Pride ↓55%→51% / Anxiety ↑17%→24% |
+| **Law** | "Double No. 1" in the provincial examination | The red circle internship 5k does not include accommodation, the "gentle armor of law students" cracks | Warmth ↓18%→14% / Public examination ↑6%→11% |
+| **Stomatology** | Station B's "Aya" tooth extraction 3 million views | Regular training hourly wage < Milk tea shop, "can't even hold chopsticks" | Trust 12%→10% / Regular training tired 5%→9% |
+| **Virology** | Douyin's "All Night After 2000 WB" 1.2 million likes | Backstage 3.7% Private messages containing the keyword "sudden death" | Respect 8% → 6% / Scientific research high pressure 5% |
 
-> **结论**：学科光芒没有熄灭，只是被年轻人的房租、夜班、脱发折射得更立体。
+> **Conclusion**: The light of the discipline has not been extinguished, but has been reflected more three-dimensionally by young people’s rent, night shifts, and hair loss.
 
 ---
 
-## 三、人才与师资：院士隔壁的“二等公民”
+## 3. Talents and teachers: “second-class citizens” next to academicians
 
-| 指标 | 官方数字 | 学生体感 | 舆情热词 |
+| Indicators | Official figures | Student experience | Hot words |
 |---|---|---|---|
-| 全职院士 | 11 人 | “院士把卫星数据当糖果发” vs “PCR 仪排三周” | **“资源落差”** |
-| 博雅计划 | 淘汰率 20% | “神仙打架”课表刷屏 | **“卷到凌晨三点”** |
-| 诺奖光环 | 谢克曼返校演讲 | “失败是科研入场券”弹幕 80 万播 | **“含金量飙升”** |
+| Full-time academicians | 11 people | "Academicians hand out satellite data like candy" vs "The PCR machine is scheduled for three weeks" | **"Resource Gap"** |
+| Boya Project | Elimination rate 20% | "Fighting of Gods" schedule hits the screen | **"Scroll until three in the morning"** |
+| Nobel Prize halo | Schekman's homecoming speech | "Failure is the ticket to scientific research" barrage 800,000 views | **"Soaring gold content"** |
 
-> **结论**：顶尖师资是珞珈山最强磁场，也是“内部不平等”最显眼坐标。
+> **Conclusion**: Top teachers are the strongest magnetic field in Luojia Mountain and the most conspicuous coordinate of "internal inequality".
 
 ---
 
-## 四、校园文化与国际化：樱花、讲坛与学分坑
+## 4. Campus culture and internationalization: cherry blossoms, forums and credit pits
 
-| 场景 | 浪漫叙事 | 现实裂缝 | 情感两极 |
+| Scene | Romantic narrative | Cracks in reality | Emotional polarity |
 |---|---|---|---|
-| 樱花节 | 小红书 10 万赞“童话滤镜” | #武汉人挤不进武大# 3.8 万条愤怒 | 游客 47% / 学生 36% |
-| 珞珈讲坛 | 京都大学学生朗诵《将进酒》 80 万播 | 哈佛交换“300 美元房租劝退普通家庭” | 文化共振 58% / 性价比 31% |
-| 海外校区 | “高级游学”抖音 460 万播 | “学分坑比房租更可怕” | 理想 42% / 质疑 37% |
+| Cherry Blossom Festival | Little Red Book 100,000 likes for "Fairy Tale Filter" | #武汉人cannot enter Wuhan University# 38,000 angry comments | Tourists 47% / students 36% |
+| Luojia Forum | Kyoto University students recited "The Wine Will Come in" 800,000 views | Harvard exchange "$300 rent to persuade ordinary families to quit" | Cultural resonance 58% / Cost-effectiveness 31% |
+| Overseas Campus | "Advanced Study Tour" Douyin 4.6 million views | "The credit pit is more terrifying than the rent" | Ideal 42% / Doubt 37% |
 
-> **结论**：樱花年年开，**浪漫与焦虑的拉锯**也年年更新。
+> **Conclusion**: The cherry blossoms bloom every year, and the tug of romance and anxiety is renewed every year.
 
 ---
 
-## 五、社会服务：从“家门口的国家队”到“光谷房租推手”
+## 5. Social Services: From “National Team at Doorstep” to “Optics Valley Rent Pusher”
 
-| 议题 | 正向案例 | 负面/焦虑 | 情感分布 |
+| Topics | Positive cases | Negative/anxiety | Emotional distribution |
 |---|---|---|---|
-| **长江大保护** | 渔民放流中华鲟 32.7 万赞 | —— | 非常正面 64% |
-| **抗疫记忆** | “救命盒”试剂、“ECMO 拉回父亲” | 科研经费、医生待遇 28% | 心疼+致敬 60% |
-| **乡村振兴** | “珞珈红”茶叶、菌菇大王爷爷 | 销路隐忧 10% | 期待 55% |
-| **大科学装置** | “给原子拍 CT” 4.3 万赞 | 光谷房租一年涨 12% | 感谢 38% / 生活不易 29% |
+| **Yangtze River Protection** | Fishermen release Chinese sturgeon 327,000 likes | —— | Very positive 64% |
+| **Anti-epidemic memory** | "Life-saving kit" reagent, "ECMO brings father back" | Scientific research funding, doctor's treatment 28% | Feelings + tribute 60% |
+| **Rural Revitalization** | "Luojiahong" tea and mushroom king grandpa | Sales concerns 10% | Expectations 55% |
+| **Big scientific device** | "Taking CT of atoms" 43,000 likes | Optics Valley rent increased by 12% in a year | Thank you 38% / Life is not easy 29% |
 
-> **结论**：武大让湖北人既谈亲人又谈底气，**“感谢”与“房租焦虑”并存**是最市井的温度。
+> **Conclusion**: Wuhan University allows Hubei people to talk about their relatives and confidence. **"Thank you" and "rent anxiety" coexist** is the most popular temperature.
 
 ---
 
-## 六、结论：珞珈山的三重面孔
+## 6. Conclusion: The three faces of Luojia Mountain
 
-| 面孔 | 关键词 | 数据注脚 |
+| Faces | Keywords | Data footnotes |
 |---|---|---|
-| **骄傲** | 世界第一学科、11 位院士、抗疫硬核 | 自豪声量 51% |
-| **焦虑** | 房租、规培、绩点、抢票 | 焦虑声量 24% |
-| **烟火气** | 樱花滤镜、校史段子、菌菇大王 | 温情/怀旧 45% |
+| **Proud** | The world’s number one discipline, 11 academicians, hard-core anti-epidemic | Proud voice volume 51% |
+| **Anxiety** | Rent, training, performance points, ticket grabbing | Anxiety volume 24% |
+| **Fireworks** | Sakura filter, school history jokes, Mushroom King | Warmth/nostalgia 45% |
 
-> **一句话总结**：  
-> 在珞珈山，**百年名校不是博物馆，而是一场永不停更的青春现场**——  
-> 你可以用任何姿势与它发生关系，它也用所有情绪回应你：  
-> *骄傲给你翅膀，焦虑给你重量，烟火气给你继续生活的理由。*
+> **One sentence summary**:
+> In Luojia Mountain, the most famous century-old school is not a museum, but a never-ending scene of youth——
+> You can have a relationship with it in any posture, and it responds to you with all emotions:
+> *Pride gives you wings, anxiety gives you weight, and fireworks gives you a reason to continue living. *

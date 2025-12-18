@@ -1,6 +1,4 @@
-"""
-章节篇幅规划节点。
-"""
+"""Chapter length planning nodes."""
 
 from __future__ import annotations
 
@@ -19,19 +17,17 @@ from .base_node import BaseNode
 
 
 class WordBudgetNode(BaseNode):
-    """
-    规划各章节字数与重点。
+    """Plan the word count and focus of each chapter.
 
-    输出总字数、全局写作准则以及每章/小节的 target/min/max 字数约束。
-    """
+    Outputs total word count, global writing guidelines, and target/min/max word count constraints for each chapter/section."""
 
     def __init__(self, llm_client):
-        """仅记录LLM客户端引用，方便run阶段发起请求"""
+        """Only LLM client references are recorded to facilitate requests initiated during the run phase."""
         super().__init__(llm_client, "WordBudgetNode")
-        # 初始化鲁棒JSON解析器，启用所有修复策略
+        # Initialize robust JSON parser, enable all repair strategies
         self.json_parser = RobustJSONParser(
             enable_json_repair=True,
-            enable_llm_repair=False,  # 可以根据需要启用LLM修复
+            enable_llm_repair=False,  # LLM repair can be enabled as needed
             max_repair_attempts=3,
         )
 
@@ -44,21 +40,19 @@ class WordBudgetNode(BaseNode):
         query: str,
         template_overview: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """
-        根据设计稿和所有素材规划章节字数，让LLM写作时有明确篇幅目标。
+        """Plan the word count of chapters based on the design draft and all materials, so that LLM has clear length goals when writing.
 
-        参数:
-            sections: 模板章节列表。
-            design: 布局节点返回的设计稿（title/toc/hero等）。
-            reports: 三引擎报告映射。
-            forum_logs: 论坛日志原文。
-            query: 用户查询词。
-            template_overview: 可选的模板概览，含章节元信息。
+        Parameters:
+            sections: list of template sections.
+            design: The design draft returned by the layout node (title/toc/hero, etc.).
+            reports: Three-engine report mapping.
+            forum_logs: Forum log original text.
+            query: user query word.
+            template_overview: Optional template overview, including chapter meta-information.
 
-        返回:
-            dict: 章节篇幅规划结果，包含 `totalWords`、`globalGuidelines` 与逐章 `chapters`。
-        """
-        # 输入中除了章节骨架外，还包含布局节点输出，方便约束篇幅时参考视觉主次
+        Return:
+            dict: Chapter length planning results, including `totalWords`, `globalGuidelines` and chapter-by-chapters`."""
+        # In addition to the chapter skeleton, the input also contains layout node output, which facilitates reference of visual priority when constraining the length.
         payload = {
             "query": query,
             "design": design,
@@ -79,48 +73,46 @@ class WordBudgetNode(BaseNode):
             top_p=0.85,
         )
         plan = self._parse_response(response)
-        logger.info("章节字数规划已生成")
+        logger.info("Chapter word count plan has been generated")
         return plan
 
     def _parse_response(self, raw: str) -> Dict[str, Any]:
-        """
-        将LLM输出的JSON文本转为字典，失败时提示规划异常。
+        """Convert the JSON text output by LLM into a dictionary, and prompt a planning exception when it fails.
 
-        使用鲁棒JSON解析器进行多重修复尝试：
-        1. 清理markdown标记和思考内容
-        2. 本地语法修复（括号平衡、逗号补全、控制字符转义等）
-        3. 使用json_repair库进行高级修复
-        4. 可选的LLM辅助修复
+        Multiple repair attempts using a robust JSON parser:
+        1. Clean up markdown tags and thinking content
+        2. Local grammar fixes (bracket balancing, comma completion, control character escaping, etc.)
+        3. Use json_repair library for advanced repair
+        4. Optional LLM-assisted repair
 
-        参数:
-            raw: LLM返回值，可能包含```包裹、思考内容等。
+        Parameters:
+            raw: LLM return value, which may include ``` packages, thinking content, etc.
 
-        返回:
-            dict: 合法的篇幅规划JSON。
+        Return:
+            dict: legal length planning JSON.
 
-        异常:
-            ValueError: 当响应为空或JSON解析失败时抛出。
-        """
+        Exception:
+            ValueError: Thrown when the response is empty or JSON parsing fails."""
         try:
             result = self.json_parser.parse(
                 raw,
-                context_name="篇幅规划",
+                context_name="Space planning",
                 expected_keys=["totalWords", "globalGuidelines", "chapters"],
             )
-            # 验证关键字段的类型
+            # Validate the type of key fields
             if not isinstance(result.get("totalWords"), (int, float)):
-                logger.warning("篇幅规划缺少totalWords字段或类型错误，使用默认值")
+                logger.warning("The totalWords field in the space plan is missing or the type is wrong. Use the default value.")
                 result.setdefault("totalWords", 10000)
             if not isinstance(result.get("globalGuidelines"), list):
-                logger.warning("篇幅规划缺少globalGuidelines字段或类型错误，使用空列表")
+                logger.warning("The globalGuidelines field is missing or the type is wrong in the space plan, and an empty list is used.")
                 result.setdefault("globalGuidelines", [])
             if not isinstance(result.get("chapters"), (list, dict)):
-                logger.warning("篇幅规划缺少chapters字段或类型错误，使用空列表")
+                logger.warning("The chapters field is missing or the type is wrong in the space plan, and an empty list is used.")
                 result.setdefault("chapters", [])
             return result
         except JSONParseError as exc:
-            # 转换为原有的异常类型以保持向后兼容
-            raise ValueError(f"篇幅规划JSON解析失败: {exc}") from exc
+            # Convert to original exception type to maintain backward compatibility
+            raise ValueError(f"Space planning JSON parsing failed: {exc}") from exc
 
 
 __all__ = ["WordBudgetNode"]

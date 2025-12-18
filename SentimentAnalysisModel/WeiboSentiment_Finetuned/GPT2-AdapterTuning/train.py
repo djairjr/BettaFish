@@ -14,7 +14,7 @@ from tqdm import tqdm
 from adapter import AdapterLayer
 from gpt2_adapter import GPT2BlockWithAdapter
 
-# 设置随机种子
+# Set random seed
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -24,7 +24,7 @@ def set_seed(seed):
 
 set_seed(42)
 
-# 定义微博情感分析数据集
+# Define Weibo sentiment analysis data set
 class WeiboSentimentDataset(Dataset):
     def __init__(self, reviews, labels, tokenizer, max_length=128):
         self.reviews = reviews
@@ -53,40 +53,40 @@ class WeiboSentimentDataset(Dataset):
             'labels': torch.tensor(label, dtype=torch.long)
         }
 
-# 定义GPT2分类模型，带Adapter
+# Define GPT2 classification model with Adapter
 class GPT2ClassifierWithAdapter(nn.Module):
     def __init__(self, pretrained_model_name, num_labels=2):
         super(GPT2ClassifierWithAdapter, self).__init__()
-        # 加载预训练模型
+        # Load pretrained model
         self.gpt2 = GPT2ForSequenceClassification.from_pretrained(
             pretrained_model_name,
             num_labels=num_labels
         )
         
-        # 确保模型配置中设置了pad_token_id
+        # Make sure pad_token_id is set in the model configuration
         self.gpt2.config.pad_token_id = self.gpt2.config.eos_token_id
         
-        # 替换原始的GPT2Block为带Adapter的版本
+        # Replace the original GPT2Block with the version with Adapter
         config = self.gpt2.config
         for i in range(len(self.gpt2.transformer.h)):
-            # 保存原始权重
+            # Save original weights
             old_block = self.gpt2.transformer.h[i]
-            # 创建带Adapter的新Block
+            # Create a new Block with Adapter
             new_block = GPT2BlockWithAdapter(config)
-            # 复制原始权重
+            # Copy original weights
             new_block.load_state_dict(old_block.state_dict(), strict=False)
-            # 替换
+            # replace
             self.gpt2.transformer.h[i] = new_block
             
-        # 冻结原始GPT2参数
+        # Freeze original GPT2 parameters
         for param in self.gpt2.parameters():
             param.requires_grad = False
             
-        # 解冻分类器层和Adapter层参数
+        # Unfreeze the classifier layer and Adapter layer parameters
         for param in self.gpt2.score.parameters():
             param.requires_grad = True
             
-        # 解冻所有Adapter层
+        # Unfreeze all Adapter layers
         for i in range(len(self.gpt2.transformer.h)):
             for param in self.gpt2.transformer.h[i].adapter.parameters():
                 param.requires_grad = True
@@ -98,7 +98,7 @@ class GPT2ClassifierWithAdapter(nn.Module):
             labels=labels
         )
 
-# 训练函数
+# training function
 def train_model(model, train_dataloader, val_dataloader, optimizer, scheduler, device, epochs=3):
     best_f1 = 0.0
     
@@ -107,16 +107,16 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, scheduler, d
         model.train()
         total_loss = 0
         
-        # 训练循环
+        # training loop
         progress_bar = tqdm(train_dataloader, desc="Training", position=0, leave=True)
         for batch in progress_bar:
-            # 将数据移到GPU
+            # Move data to GPU
             batch = {k: v.to(device) for k, v in batch.items()}
             
-            # 清零梯度
+            # Clear gradient
             optimizer.zero_grad()
             
-            # 前向传播
+            # forward propagation
             outputs = model(
                 input_ids=batch['input_ids'],
                 attention_mask=batch['attention_mask'],
@@ -126,36 +126,36 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, scheduler, d
             loss = outputs.loss
             total_loss += loss.item()
             
-            # 反向传播
+            # Backpropagation
             loss.backward()
             
-            # 梯度裁剪，防止梯度爆炸
+            # Gradient clipping to prevent gradient explosion
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             
-            # 参数更新
+            # Parameter update
             optimizer.step()
             scheduler.step()
             
-            # 更新进度条
+            # Update progress bar
             progress_bar.set_postfix({"loss": loss.item()})
         
-        # 计算平均训练损失
+        # Calculate average training loss
         avg_train_loss = total_loss / len(train_dataloader)
         print(f"Average training loss: {avg_train_loss:.4f}")
         
-        # 评估模型
+        # Evaluation model
         val_metrics = evaluate_model(model, val_dataloader, device)
         print(f"Validation Loss: {val_metrics['loss']:.4f}")
         print(f"Validation Accuracy: {val_metrics['accuracy']:.4f}")
         print(f"Validation F1 Score: {val_metrics['f1']:.4f}")
         
-        # 保存最佳模型
+        # Save the best model
         if val_metrics['f1'] > best_f1:
             best_f1 = val_metrics['f1']
             torch.save(model.state_dict(), "best_weibo_sentiment_model.pth")
             print("Saved best model!")
 
-# 评估函数
+# evaluation function
 def evaluate_model(model, dataloader, device):
     model.eval()
     total_loss = 0
@@ -175,7 +175,7 @@ def evaluate_model(model, dataloader, device):
             loss = outputs.loss
             total_loss += loss.item()
             
-            # 获取预测结果
+            # Get prediction results
             logits = outputs.logits
             preds = torch.argmax(logits, dim=1).cpu().numpy()
             labels = batch['labels'].cpu().numpy()
@@ -183,7 +183,7 @@ def evaluate_model(model, dataloader, device):
             all_preds.extend(preds)
             all_labels.extend(labels)
     
-    # 计算评估指标
+    # Calculate evaluation metrics
     accuracy = accuracy_score(all_labels, all_preds)
     f1 = f1_score(all_labels, all_preds, average='macro')
     avg_loss = total_loss / len(dataloader)
@@ -195,42 +195,42 @@ def evaluate_model(model, dataloader, device):
     }
 
 def main():
-    # 设置模型本地保存路径
+    # Set the local save path of the model
     model_name = 'uer/gpt2-chinese-cluecorpussmall'
     local_model_path = './models/gpt2-chinese'
     
-    # 确保目录存在
+    # Make sure the directory exists
     os.makedirs(local_model_path, exist_ok=True)
     
-    # 加载数据集
-    print("加载微博情感数据集...")
+    # Load dataset
+    print("Loading Weibo emotion data set...")
     df = pd.read_csv('dataset/weibo_senti_100k.csv')
     
-    # 分割数据集
+    # Split the dataset
     train_df, val_df = train_test_split(df, test_size=0.1, random_state=42, stratify=df['label'])
     
-    # 加载tokenizer和模型
-    print("加载预训练模型和tokenizer...")
+    # Load tokenizer and model
+    print("Load pre-trained model and tokenizer...")
     
-    # 检查本地是否已有模型
+    # Check if the model already exists locally
     if os.path.exists(os.path.join(local_model_path, 'config.json')):
-        print(f"从本地路径加载模型: {local_model_path}")
+        print(f"Load model from local path: {local_model_path}")
         tokenizer = BertTokenizer.from_pretrained(local_model_path)
     else:
-        print(f"从Hugging Face下载模型到: {local_model_path}")
+        print(f"Download the model from Hugging Face to: {local_model_path}")
         tokenizer = BertTokenizer.from_pretrained(model_name, cache_dir=local_model_path)
-        # 保存tokenizer到本地
+        # Save tokenizer locally
         tokenizer.save_pretrained(local_model_path)
     
-    # 设置padding token (BertTokenizer通常已有[PAD]作为padding token)
+    # Set padding token (BertTokenizer usually already has [PAD] as padding token)
     if tokenizer.pad_token is None:
-        # 如果没有，显式设置为[PAD]
+        # If not, explicitly set to [PAD]
         tokenizer.pad_token = '[PAD]'
     
-    # 记录pad_token的ID，确保模型和tokenizer使用相同的pad_token_id
+    # Record the ID of the pad_token and ensure that the model and tokenizer use the same pad_token_id
     pad_token_id = tokenizer.pad_token_id
     
-    # 创建数据集
+    # Create a dataset
     train_dataset = WeiboSentimentDataset(
         train_df['review'].values,
         train_df['label'].values,
@@ -243,48 +243,48 @@ def main():
         tokenizer
     )
     
-    # 创建数据加载器
+    # Create data loader
     train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=16)
     
-    # 设置设备
+    # Set up the device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"使用设备: {device}")
+    print(f"Use device: {device}")
     
-    # 初始化模型
+    # Initialize model
     if (os.path.exists(os.path.join(local_model_path, 'pytorch_model.bin')) or 
         os.path.exists(os.path.join(local_model_path, 'model.safetensors'))):
-        print(f"从本地路径加载模型权重: {local_model_path}")
+        print(f"Load model weights from local path: {local_model_path}")
         model = GPT2ClassifierWithAdapter(local_model_path)
     else:
-        print(f"从Hugging Face下载模型权重到: {local_model_path}")
-        # 直接从Hugging Face下载并保存完整模型
+        print(f"Download model weights from Hugging Face to: {local_model_path}")
+        # Download and save complete models directly from Hugging Face
         temp_model = GPT2ForSequenceClassification.from_pretrained(model_name)
         temp_model.save_pretrained(local_model_path)
-        # 然后用保存的模型创建GPT2ClassifierWithAdapter
+        # Then create a GPT2ClassifierWithAdapter with the saved model
         model = GPT2ClassifierWithAdapter(local_model_path)
     
-    # 确保模型使用与tokenizer相同的pad_token_id
+    # Make sure the model uses the same pad_token_id as the tokenizer
     model.gpt2.config.pad_token_id = pad_token_id
     model.to(device)
     
-    # 统计需要训练的参数
+    # Statistics need to be trained parameters
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     
-    print(f"模型总参数量: {total_params}")
-    print(f"需要训练的参数量: {trainable_params} ({trainable_params/total_params*100:.2f}%)")
+    print(f"Total number of model parameters: {total_params}")
+    print(f"Number of parameters to be trained: {trainable_params} ({trainable_params/total_params*100:.2f}%)")
     
-    # 设置优化器和学习率调度器
+    # Set up the optimizer and learning rate scheduler
     optimizer = AdamW(
         [p for p in model.parameters() if p.requires_grad],
         lr=5e-5,
         eps=1e-8
     )
     
-    # 设置总训练步数和warmup步数
-    total_steps = len(train_dataloader) * 2  # 2个epoch
-    warmup_steps = int(total_steps * 0.1)  # 10%的warmup
+    # Set the total number of training steps and warmup steps
+    total_steps = len(train_dataloader) * 2  # 2 epochs
+    warmup_steps = int(total_steps * 0.1)  # 10% warmup
     
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
@@ -292,8 +292,8 @@ def main():
         num_training_steps=total_steps
     )
     
-    # 训练模型
-    print("开始训练...")
+    # Training model
+    print("Start training...")
     train_model(
         model=model,
         train_dataloader=train_dataloader,
@@ -304,7 +304,7 @@ def main():
         epochs=2
     )
     
-    print("训练完成!")
+    print("Training completed!")
 
 if __name__ == "__main__":
     main() 

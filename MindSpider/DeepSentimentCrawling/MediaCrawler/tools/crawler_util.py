@@ -1,18 +1,18 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2023/12/2 12:53
-# @Desc    : 爬虫相关的工具函数
+# @Desc: crawler-related tool functions
 
 import base64
 import json
@@ -64,13 +64,13 @@ async def find_qrcode_img_from_canvas(page: Page, canvas_selector: str) -> str:
 
     """
 
-    # 等待Canvas元素加载完成
+    # Wait for the Canvas element to load
     canvas = await page.wait_for_selector(canvas_selector)
 
-    # 截取Canvas元素的截图
+    # Take a screenshot of the Canvas element
     screenshot = await canvas.screenshot()
 
-    # 将截图转换为base64格式
+    # Convert screenshot to base64 format
     base64_image = base64.b64encode(screenshot).decode('utf-8')
     return base64_image
 
@@ -183,7 +183,7 @@ def format_proxy_info(ip_proxy_info) -> Tuple[Optional[Dict], Optional[str]]:
         "username": ip_proxy_info.user,
         "password": ip_proxy_info.password,
     }
-    # httpx 0.28.1 需要直接传入代理URL字符串，而不是字典
+    # httpx 0.28.1 needs to pass in the proxy URL string directly instead of a dictionary
     if ip_proxy_info.user and ip_proxy_info.password:
         httpx_proxy = f"http://{ip_proxy_info.user}:{ip_proxy_info.password}@{ip_proxy_info.ip}:{ip_proxy_info.port}"
     else:

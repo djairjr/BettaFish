@@ -1,17 +1,17 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2025/7/31
-# @Desc    : 豌豆HTTP 代理IP实现
+# @Desc: Wandou HTTP proxy IP implementation
 import os
 from typing import Dict, List
 from urllib.parse import urlencode
@@ -26,11 +26,9 @@ from tools import utils
 class WanDouHttpProxy(ProxyProvider):
 
     def __init__(self, app_key: str, num: int = 100):
-        """
-        豌豆HTTP 代理IP实现
-        :param app_key: 开放的app_key,可以通过用户中心获取
-        :param num: 单次提取IP数量,最大100
-        """
+        """Wandou HTTP proxy IP implementation
+        :param app_key: open app_key, which can be obtained through the user center
+        :param num: The number of IPs extracted at a time, the maximum is 100"""
         self.proxy_brand_name = "WANDOUHTTP"
         self.api_path = "https://api.wandouapp.com/"
         self.params = {
@@ -45,16 +43,16 @@ class WanDouHttpProxy(ProxyProvider):
         :return:
         """
 
-        # 优先从缓存中拿 IP
+        # Get IP from cache first
         ip_cache_list = self.ip_cache.load_all_ip(
             proxy_brand_name=self.proxy_brand_name
         )
         if len(ip_cache_list) >= num:
             return ip_cache_list[:num]
 
-        # 如果缓存中的数量不够，从IP代理商获取补上，再存入缓存中
+        # If the number in the cache is not enough, get it from the IP agent and store it in the cache.
         need_get_count = num - len(ip_cache_list)
-        self.params.update({"num": min(need_get_count, 100)})  # 最大100
+        self.params.update({"num": min(need_get_count, 100)})  # Max 100
         ip_infos = []
         async with httpx.AsyncClient() as client:
             url = self.api_path + "?" + urlencode(self.params)
@@ -73,7 +71,7 @@ class WanDouHttpProxy(ProxyProvider):
                     ip_info_model = IpInfoModel(
                         ip=ip_item.get("ip"),
                         port=ip_item.get("port"),
-                        user="",  # 豌豆HTTP不需要用户名密码认证
+                        user="",  # Wandou HTTP does not require username and password authentication
                         password="",
                         expired_time_ts=utils.get_unix_time_from_time_str(
                             ip_item.get("expire_time")
@@ -87,24 +85,21 @@ class WanDouHttpProxy(ProxyProvider):
                     )
             else:
                 error_msg = res_dict.get("msg", "unknown error")
-                # 处理具体错误码
+                # Handle specific error codes
                 error_code = res_dict.get("code")
                 if error_code == 10001:
-                    error_msg = "通用错误，具体错误信息查看msg内容"
+                    error_msg = "General error, please check msg content for specific error information"
                 elif error_code == 10048:
-                    error_msg = "没有可用套餐"
+                    error_msg = "No packages available"
                 raise IpGetError(f"{error_msg} (code: {error_code})")
         return ip_cache_list + ip_infos
 
 
 def new_wandou_http_proxy() -> WanDouHttpProxy:
-    """
-    构造豌豆HTTP实例
-    Returns:
-
-    """
+    """Construct Wandou HTTP instance
+    Returns:"""
     return WanDouHttpProxy(
         app_key=os.getenv(
-            "wandou_app_key", "你的豌豆HTTP app_key"
-        ),  # 通过环境变量的方式获取豌豆HTTP app_key
+            "wandou_app_key", "Your pea HTTP app_key"
+        ),  # Obtain Wandou HTTP app_key through environment variables
     )

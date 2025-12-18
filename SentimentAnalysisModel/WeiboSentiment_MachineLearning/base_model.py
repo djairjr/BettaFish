@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-基础模型类，为所有情感分析模型提供统一接口
-"""
+"""Basic model class, providing a unified interface for all sentiment analysis models"""
 import os
 import pickle
 from abc import ABC, abstractmethod
@@ -12,7 +10,7 @@ from utils import load_corpus
 
 
 class BaseModel(ABC):
-    """情感分析模型基类"""
+    """Sentiment analysis model base class"""
     
     def __init__(self, model_name: str):
         self.model_name = model_name
@@ -22,30 +20,29 @@ class BaseModel(ABC):
         
     @abstractmethod
     def train(self, train_data: List[Tuple[str, int]], **kwargs) -> None:
-        """训练模型"""
+        """Training model"""
         pass
     
     @abstractmethod
     def predict(self, texts: List[str]) -> List[int]:
-        """预测文本情感"""
+        """Predict text sentiment"""
         pass
     
     def predict_single(self, text: str) -> Tuple[int, float]:
-        """预测单条文本的情感
+        """Predicting the sentiment of a single text
         
         Args:
-            text: 待预测文本
+            text: text to be predicted
             
         Returns:
-            (predicted_label, confidence)
-        """
+            (predicted_label, confidence)"""
         predictions = self.predict([text])
-        return predictions[0], 0.0  # 默认置信度为0
+        return predictions[0], 0.0  # The default confidence level is 0
     
     def evaluate(self, test_data: List[Tuple[str, int]]) -> Dict[str, float]:
-        """评估模型性能"""
+        """Evaluate model performance"""
         if not self.is_trained:
-            raise ValueError(f"模型 {self.model_name} 尚未训练，请先调用train方法")
+            raise ValueError(f"The model {self.model_name} has not been trained yet, please call the train method first")
             
         texts = [item[0] for item in test_data]
         labels = [item[1] for item in test_data]
@@ -55,10 +52,10 @@ class BaseModel(ABC):
         accuracy = accuracy_score(labels, predictions)
         f1 = f1_score(labels, predictions, average='weighted')
         
-        print(f"\n{self.model_name} 模型评估结果:")
-        print(f"准确率: {accuracy:.4f}")
-        print(f"F1分数: {f1:.4f}")
-        print("\n详细报告:")
+        print(f"\n{self.model_name} Model evaluation results:")
+        print(f"Accuracy: {accuracy:.4f}")
+        print(f"F1 score: {f1:.4f}")
+        print("\nDetailed report:")
         print(classification_report(labels, predictions))
         
         return {
@@ -68,17 +65,17 @@ class BaseModel(ABC):
         }
     
     def save_model(self, model_path: str = None) -> None:
-        """保存模型到文件"""
+        """Save model to file"""
         if not self.is_trained:
-            raise ValueError(f"模型 {self.model_name} 尚未训练，无法保存")
+            raise ValueError(f"Model {self.model_name} has not been trained and cannot be saved.")
             
         if model_path is None:
             model_path = f"model/{self.model_name}_model.pkl"
             
-        # 创建保存目录
+        # Create save directory
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         
-        # 保存模型数据
+        # Save model data
         model_data = {
             'model': self.model,
             'vectorizer': self.vectorizer,
@@ -89,12 +86,12 @@ class BaseModel(ABC):
         with open(model_path, 'wb') as f:
             pickle.dump(model_data, f)
             
-        print(f"模型已保存到: {model_path}")
+        print(f"Model saved to: {model_path}")
     
     def load_model(self, model_path: str) -> None:
-        """从文件加载模型"""
+        """Load model from file"""
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"模型文件不存在: {model_path}")
+            raise FileNotFoundError(f"Model file does not exist: {model_path}")
             
         with open(model_path, 'rb') as f:
             model_data = pickle.load(f)
@@ -104,17 +101,17 @@ class BaseModel(ABC):
         self.model_name = model_data['model_name']
         self.is_trained = model_data['is_trained']
         
-        print(f"已加载模型: {model_path}")
+        print(f"Loaded model: {model_path}")
     
     @staticmethod
     def load_data(train_path: str, test_path: str) -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
-        """加载训练和测试数据"""
-        print("加载训练数据...")
+        """Load training and test data"""
+        print("Load training data...")
         train_data = load_corpus(train_path)
-        print(f"训练数据量: {len(train_data)}")
+        print(f"Training data size: {len(train_data)}")
         
-        print("加载测试数据...")
+        print("Load test data...")
         test_data = load_corpus(test_path)
-        print(f"测试数据量: {len(test_data)}")
+        print(f"Test data amount: {len(test_data)}")
         
         return train_data, test_data

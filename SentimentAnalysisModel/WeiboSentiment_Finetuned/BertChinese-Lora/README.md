@@ -1,78 +1,78 @@
-# 微博情感分析 - 基于BertChinese的微调模型
+# Weibo sentiment analysis - fine-tuning model based on BertChinese
 
-本模块使用HuggingFace上的预训练微博情感分析模型进行情感分析。
+This module uses the pre-trained Weibo sentiment analysis model on HuggingFace to perform sentiment analysis.
 
-## 模型信息
+## Model information
 
-- **模型名称**: wsqstar/GISchat-weibo-100k-fine-tuned-bert  
-- **模型类型**: BERT中文情感分类模型
-- **训练数据**: 10万条微博数据
-- **输出**: 二分类（正面/负面情感）
+- **Model name**: wsqstar/GISchat-weibo-100k-fine-tuned-bert
+- **Model type**: BERT Chinese emotion classification model
+- **Training data**: 100,000 Weibo data
+- **Output**: binary classification (positive/negative emotion)
 
-## 使用方法
+## How to use
 
-### 方法1: 直接模型调用 (推荐)
+### Method 1: Direct model call (recommended)
 ```bash
 python predict.py
 ```
 
-### 方法2: Pipeline方式
+### Method 2: Pipeline method
 ```bash
 python predict_pipeline.py
 ```
 
-## 快速开始
+## Quick Start
 
-1. 确保已安装依赖：
+1. Make sure the dependencies are installed:
 ```bash
 pip install transformers torch
 ```
 
-2. 运行预测程序：
+2. Run the forecast program:
 ```bash
 python predict.py
 ```
 
-3. 输入微博文本进行分析：
+3. Enter Weibo text for analysis:
 ```
-请输入微博内容: 今天天气真好，心情特别棒！
-预测结果: 正面情感 (置信度: 0.9234)
+Please enter Weibo content: The weather is so nice today and I am in a great mood!
+Prediction: Positive sentiment (Confidence: 0.9234)
 ```
 
-## 代码示例
+## Code Example
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
-# 加载模型
+#Load model
 model_name = "wsqstar/GISchat-weibo-100k-fine-tuned-bert"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-# 预测
-text = "今天心情很好"
+# predict
+text = "I'm in a good mood today"
 inputs = tokenizer(text, return_tensors="pt")
 outputs = model(**inputs)
 prediction = torch.argmax(outputs.logits, dim=1).item()
-print("正面情感" if prediction == 1 else "负面情感")
+print("positive emotion" if prediction == 1 else "negative emotion")
 ```
 
-## 文件说明
+## File description
 
-- `predict.py`: 主预测程序，使用直接模型调用
-- `predict_pipeline.py`: 使用pipeline方式的预测程序  
-- `README.md`: 使用说明
+- `predict.py`: main prediction program, using direct model calls
+- `predict_pipeline.py`: prediction program using pipeline method
+- `README.md`: instructions for use
 
-## 模型存储
+## Model storage
 
-- 首次运行时会自动下载模型到当前目录的 `model` 文件夹
-- 后续运行会直接从本地加载，无需重复下载
-- 模型大小约400MB，首次下载需要网络连接
+- The model will be automatically downloaded to the `model` folder in the current directory when running for the first time.
+- Subsequent runs will be loaded directly from local, no need to download again
+- The model size is about 400MB, and an internet connection is required for the first download.
 
-## 注意事项
+## Notes
 
-- 首次运行时会自动下载模型，需要网络连接
-- 模型会保存到当前目录，方便后续使用
-- 支持GPU加速，会自动检测可用设备
-- 如需清理模型文件，删除 `model` 文件夹即可
+- The model will be automatically downloaded when running for the first time, and an Internet connection is required
+- The model will be saved to the current directory for subsequent use.
+- Supports GPU acceleration and automatically detects available devices
+- If you need to clean up the model files, delete the `model` folder

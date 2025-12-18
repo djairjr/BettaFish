@@ -1,8 +1,6 @@
-"""
-Report Engine节点处理模块。
+"""Report Engine node processing module.
 
-封装模板选择、章节生成、文档布局、篇幅规划等流水线节点。
-"""
+Encapsulates pipeline nodes such as template selection, chapter generation, document layout, and space planning."""
 
 from .base_node import BaseNode, StateMutationNode
 from .template_selection_node import TemplateSelectionNode

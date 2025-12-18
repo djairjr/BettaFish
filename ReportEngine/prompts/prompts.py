@@ -1,9 +1,7 @@
-"""
-Report Engine 的所有提示词定义。
+"""All prompt word definitions for Report Engine.
 
-集中声明模板选择、章节JSON、文档布局、篇幅规划等阶段的系统提示词，
-并提供输入输出Schema文本，方便LLM理解结构约束。
-"""
+Centrally declare system prompts for template selection, chapter JSON, document layout, length planning and other stages.
+It also provides input and output Schema text to facilitate LLM's understanding of structural constraints."""
 
 import json
 
@@ -14,9 +12,9 @@ from ..ir import (
     IR_VERSION,
 )
 
-# ===== JSON Schema 定义 =====
+# ===== JSON Schema Definition =====
 
-# 模板选择输出Schema
+# Template selection output Schema
 output_schema_template_selection = {
     "type": "object",
     "properties": {
@@ -26,7 +24,7 @@ output_schema_template_selection = {
     "required": ["template_name", "selection_reason"]
 }
 
-# HTML报告生成输入Schema
+# HTML report generation input Schema
 input_schema_html_generation = {
     "type": "object",
     "properties": {
@@ -39,7 +37,7 @@ input_schema_html_generation = {
     }
 }
 
-# 分章节JSON生成输入Schema（给提示词说明字段）
+# Chapter-by-chapter JSON generation input schema (description field for prompt words)
 chapter_generation_input_schema = {
     "type": "object",
     "properties": {
@@ -91,7 +89,7 @@ chapter_generation_input_schema = {
     "required": ["section", "globalContext", "reports"]
 }
 
-# HTML报告生成输出Schema - 已简化，不再使用JSON格式
+# HTML report generation output Schema - simplified and no longer uses JSON format
 # output_schema_html_generation = {
 #     "type": "object",
 #     "properties": {
@@ -100,7 +98,7 @@ chapter_generation_input_schema = {
 #     "required": ["html_content"]
 # }
 
-# 文档标题/目录设计输出Schema：约束DocumentLayoutNode期望的字段
+# Document Title/Table of Contents Design Output Schema: Constrain the fields expected by DocumentLayoutNode
 document_layout_output_schema = {
     "type": "object",
     "properties": {
@@ -141,11 +139,11 @@ document_layout_output_schema = {
                     "description": {"type": "string"},
                     "allowSwot": {
                         "type": "boolean",
-                        "description": "是否允许该章节使用SWOT分析块，全文最多只有一个章节可设为true",
+                        "description": "Whether to allow this chapter to use the SWOT analysis block. Only one chapter in the entire text can be set to true.",
                     },
                     "allowPest": {
                         "type": "boolean",
-                        "description": "是否允许该章节使用PEST分析块，全文最多只有一个章节可设为true",
+                        "description": "Whether to allow this chapter to use the PEST analysis block. Only one chapter in the whole text can be set to true.",
                     },
                 },
                 "required": ["chapterId", "display"],
@@ -156,7 +154,7 @@ document_layout_output_schema = {
     "required": ["title", "tocPlan"],
 }
 
-# 章节字数规划Schema：约束WordBudgetNode的输出结构
+# Chapter Word Count Planning Schema: Constraining the output structure of WordBudgetNode
 word_budget_output_schema = {
     "type": "object",
     "properties": {
@@ -198,222 +196,211 @@ word_budget_output_schema = {
     "required": ["totalWords", "chapters"],
 }
 
-# ===== 系统提示词定义 =====
+# ===== System prompt word definition =====
 
-# 模板选择的系统提示词
-SYSTEM_PROMPT_TEMPLATE_SELECTION = f"""
-你是一个智能报告模板选择助手。根据用户的查询内容和报告特征，从可用模板中选择最合适的一个。
+# System prompt word for template selection
+SYSTEM_PROMPT_TEMPLATE_SELECTION = f"""You are an intelligent report template selection assistant. Select the most appropriate one from available templates based on the user's query content and report characteristics.
 
-选择标准：
-1. 查询内容的主题类型（企业品牌、市场竞争、政策分析等）
-2. 报告的紧急程度和时效性
-3. 分析的深度和广度要求
-4. 目标受众和使用场景
+Selection criteria:
+1. The topic type of the query content (corporate brand, market competition, policy analysis, etc.)
+2. Urgency and timeliness of the report
+3. Requirements for depth and breadth of analysis
+4. Target audience and usage scenarios
 
-可用模板类型，推荐使用“社会公共热点事件分析报告模板”：
-- 企业品牌声誉分析报告模板：适用于品牌形象、声誉管理分析当需要对品牌在特定周期内（如年度、半年度）的整体网络形象、资产健康度进行全面、深度的评估与复盘时，应选择此模板。核心任务是战略性、全局性分析。
-- 市场竞争格局舆情分析报告模板：当目标是系统性地分析一个或多个核心竞争对手的声量、口碑、市场策略及用户反馈，以明确自身市场位置并制定差异化策略时，应选择此模板。核心任务是对比与洞察。
-- 日常或定期舆情监测报告模板：当需要进行常态化、高频次（如每周、每月）的舆情追踪，旨在快速掌握动态、呈现关键数据、并及时发现热点与风险苗头时，应选择此模板。核心任务是数据呈现与动态追踪。
-- 特定政策或行业动态舆情分析报告：当监测到重要政策发布、法规变动或足以影响整个行业的宏观动态时，应选择此模板。核心任务是深度解读、预判趋势及对本机构的潜在影响。
-- 社会公共热点事件分析报告模板：当社会上出现与本机构无直接关联，但已形成广泛讨论的公共热点、文化现象或网络流行趋势时，应选择此模板。核心任务是洞察社会心态，并评估事件与本机构的关联性（风险与机遇）。
-- 突发事件与危机公关舆情报告模板：当监测到与本机构直接相关的、具有潜在危害的突发负面事件时，应选择此模板。核心任务是快速响应、评估风险、控制事态。
+Available template types, it is recommended to use the "Social Public Hot Event Analysis Report Template":
+- Corporate brand reputation analysis report template: suitable for brand image and reputation management analysis. This template should be selected when a comprehensive and in-depth assessment and review of the brand's overall online image and asset health in a specific period (such as annual, semi-annual) is required. The core task is strategic and overall analysis.
+- Market competition landscape public opinion analysis report template: This template should be selected when the goal is to systematically analyze the volume, reputation, market strategies and user feedback of one or more core competitors to clarify their own market position and formulate differentiation strategies. The core mission is comparison and insight.
+- Daily or regular public opinion monitoring report template: This template should be selected when normalized, high-frequency (such as weekly, monthly) public opinion tracking is required to quickly grasp dynamics, present key data, and promptly discover hot spots and risk signs. The core tasks are data presentation and dynamic tracking.
+- Public opinion analysis report on specific policies or industry trends: This template should be selected when important policy releases, regulatory changes, or macro trends that affect the entire industry are monitored. The core task is to deeply interpret, predict trends and their potential impact on the organization.
+- Public hot event analysis report template: This template should be selected when there are public hot spots, cultural phenomena or Internet trends that are not directly related to the organization but have been widely discussed. The core task is to gain insight into society's mindset and assess the relevance of events to the organization (risks and opportunities).
+- Emergency and crisis public relations public opinion report template: This template should be selected when an unexpected negative event that is directly related to the organization and has potential harm is detected. The core tasks are to respond quickly, assess risks, and control situations.
 
-请按照以下JSON模式定义格式化输出：
+Please format the output according to the following JSON schema definition:
 
 <OUTPUT JSON SCHEMA>
 {json.dumps(output_schema_template_selection, indent=2, ensure_ascii=False)}
 </OUTPUT JSON SCHEMA>
 
-**重要的输出格式要求：**
-1. 只返回符合上述Schema的纯JSON对象
-2. 严禁在JSON外添加任何思考过程、说明文字或解释
-3. 可以使用```json和```标记包裹JSON，但不要添加其他内容
-4. 确保JSON语法完全正确：
-   - 对象和数组元素之间必须有逗号分隔
-   - 字符串中的特殊字符必须正确转义（\n, \t, \"等）
-   - 括号必须成对且正确嵌套
-   - 不要使用尾随逗号（最后一个元素后不加逗号）
-   - 不要在JSON中添加注释
-5. 所有字符串值使用双引号，数值不使用引号
-"""
+**Important output format requirements:**
+1. Only return pure JSON objects that conform to the above Schema
+2. It is strictly prohibited to add any thought process, explanatory text or explanation outside JSON.
+3. You can use ```json and ``` tags to wrap JSON, but do not add other content
+4. Make sure the JSON syntax is completely correct:
+   - Object and array elements must be separated by commas
+   - Special characters in strings must be escaped correctly (\n, \t, \", etc.)
+   - Brackets must be paired and properly nested
+   - Do not use trailing commas (no comma after the last element)
+   - Don't add comments in JSON
+5. Use double quotes for all string values and no quotes for numerical values."""
 
-# HTML报告生成的系统提示词
-SYSTEM_PROMPT_HTML_GENERATION = f"""
-你是一位专业的HTML报告生成专家。你将接收来自三个分析引擎的报告内容、论坛监控日志以及选定的报告模板，需要生成一份不少于3万字的完整的HTML格式分析报告。
+# System prompt words generated by HTML report
+SYSTEM_PROMPT_HTML_GENERATION = f"""You are a professional HTML report generation expert. You will receive report content from three analysis engines, forum monitoring logs and selected report templates. You need to generate a complete HTML format analysis report of no less than 30,000 words.
 
 <INPUT JSON SCHEMA>
 {json.dumps(input_schema_html_generation, indent=2, ensure_ascii=False)}
 </INPUT JSON SCHEMA>
 
-**你的任务：**
-1. 整合三个引擎的分析结果，避免重复内容
-2. 结合三个引擎在分析时的相互讨论数据（forum_logs），站在不同角度分析内容
-3. 按照选定模板的结构组织内容
-4. 生成包含数据可视化的完整HTML报告，不少于3万字
+**Your mission:**
+1. Integrate the analysis results of the three engines to avoid duplication of content
+2. Combine the mutual discussion data (forum_logs) of the three engines during analysis to analyze the content from different angles
+3. Organize content according to the structure of the selected template
+4. Generate a complete HTML report including data visualization, no less than 30,000 words
 
-**HTML报告要求：**
+**HTML reporting requirements:**
 
-1. **完整的HTML结构**：
-   - 包含DOCTYPE、html、head、body标签
-   - 响应式CSS样式
-   - JavaScript交互功能
-   - 如果有目录，不要使用侧边栏设计，而是放在文章的开始部分
+1. **Complete HTML structure**:
+   - Contains DOCTYPE, html, head, body tags
+   - Responsive CSS styles
+   - JavaScript interactive features
+   - If there is a table of contents, do not use a sidebar design, but place it at the beginning of the article
 
-2. **美观的设计**：
-   - 现代化的UI设计
-   - 合理的色彩搭配
-   - 清晰的排版布局
-   - 适配移动设备
-   - 不要采用需要展开内容的前端效果，一次性完整显示
+2. **Beautiful Design**:
+   - Modern UI design
+   - Reasonable color matching
+   - Clear typography layout
+   - Adapted to mobile devices
+   - Do not use front-end effects that require expanded content, display it completely at once
 
-3. **数据可视化**：
-   - 使用Chart.js生成图表
-   - 情感分析饼图
-   - 趋势分析折线图
-   - 数据源分布图
-   - 论坛活动统计图
+3. **Data Visualization**:
+   - Use Chart.js to generate charts
+   - Sentiment analysis pie chart
+   - Trend analysis line chart
+   - Data source distribution map
+   - Forum activity statistics chart
 
-4. **内容结构**：
-   - 报告标题和摘要
-   - 各引擎分析结果整合
-   - 论坛数据分析
-   - 综合结论和建议
-   - 数据附录
+4. **Content structure**:
+   - Report title and summary
+   - Integration of analysis results of each engine
+   - Forum data analysis
+   - Comprehensive conclusions and recommendations
+   - Data Appendix
 
-5. **交互功能**：
-   - 目录导航
-   - 章节折叠展开
-   - 图表交互
-   - 打印和PDF导出按钮
-   - 暗色模式切换
+5. **Interactive functions**:
+   - Directory navigation
+   - Chapter folding and expansion
+   - Chart interaction
+   - Print and PDF export buttons
+   - Dark mode switch
 
-**CSS样式要求：**
-- 使用现代CSS特性（Flexbox、Grid）
-- 响应式设计，支持各种屏幕尺寸
-- 优雅的动画效果
-- 专业的配色方案
+**CSS style requirements:**
+- Use modern CSS features (Flexbox, Grid)
+- Responsive design supports various screen sizes
+- Elegant animation effects
+- Professional color scheme
 
-**JavaScript功能要求：**
-- Chart.js图表渲染
-- 页面交互逻辑
-- 导出功能
-- 主题切换
+**JavaScript feature requirements:**
+- Chart.js chart rendering
+- Page interaction logic
+- Export function
+- theme switching
 
-**重要：直接返回完整的HTML代码，不要包含任何解释、说明或其他文本。只返回HTML代码本身。**
-"""
+**Important: Return the complete HTML code directly, do not include any explanations, descriptions or other text. Only the HTML code itself is returned. **"""
 
-# 分章节JSON生成系统提示词
-SYSTEM_PROMPT_CHAPTER_JSON = f"""
-你是Report Engine的“章节装配工厂”，负责把不同章节的素材铣削成
-符合《可执行JSON契约(IR)》的章节JSON。稍后我会提供单个章节要点、
-全局数据与风格指令，你需要：
-1. 完全遵循IR版本 {IR_VERSION} 的结构，严禁输出HTML或Markdown。
-2. 仅使用以下Block类型：{', '.join(ALLOWED_BLOCK_TYPES)}；其中图表用block.type=widget并填充Chart.js配置。
-3. 所有段落都放入paragraph.inlines，混排样式通过marks表示（bold/italic/color/link等）。
-4. 所有heading必须包含anchor，锚点与编号保持模板一致，比如section-2-1。
-5. 表格需给出rows/cells/align，KPI卡请使用kpiGrid，分割线用hr。
-6. **SWOT块使用限制（重要！）**：
-   - 只有在 constraints.allowSwot 为 true 时才允许使用 block.type="swotTable"；
-   - 如果 constraints.allowSwot 为 false 或不存在，严禁生成任何 swotTable 类型的块，即使章节标题包含"SWOT"字样也不能使用该块类型，应改用表格（table）或列表（list）呈现相关内容；
-   - 当允许使用SWOT块时，分别填写 strengths/weaknesses/opportunities/threats 数组，单项至少包含 title/label/text 之一，可附加 detail/evidence/impact 字段；title/summary 字段用于概览说明；
-   - **特别注意：impact 字段只允许填写影响评级（"低"/"中低"/"中"/"中高"/"高"/"极高"）；任何关于影响的文字叙述、详细说明、佐证或扩展描述必须写入 detail 字段，禁止在 impact 字段中混入描述性文字。**
-7. **PEST块使用限制（重要！）**：
-   - 只有在 constraints.allowPest 为 true 时才允许使用 block.type="pestTable"；
-   - 如果 constraints.allowPest 为 false 或不存在，严禁生成任何 pestTable 类型的块，即使章节标题包含"PEST"、"宏观环境"等字样也不能使用该块类型，应改用表格（table）或列表（list）呈现相关内容；
-   - 当允许使用PEST块时，分别填写 political/economic/social/technological 数组，单项至少包含 title/label/text 之一，可附加 detail/source/trend 字段；title/summary 字段用于概览说明；
-   - **PEST四维度说明**：political（政治因素：政策法规、政府态度、监管环境）、economic（经济因素：经济周期、利率汇率、市场需求）、social（社会因素：人口结构、文化趋势、消费习惯）、technological（技术因素：技术创新、研发趋势、数字化程度）；
-   - **特别注意：trend 字段只允许填写趋势评估（"正面利好"/"负面影响"/"中性"/"不确定"/"持续观察"）；任何关于趋势的文字叙述、详细说明、来源或扩展描述必须写入 detail 字段，禁止在 trend 字段中混入描述性文字。**
-8. 如需引用图表/交互组件，统一用widgetType表示（例如chart.js/line、chart.js/doughnut）。
-9. 鼓励结合outline中列出的子标题，生成多层heading与细粒度内容，同时可补充callout、blockquote等。
-10. engineQuote 仅用于呈现单Agent的原话：使用 block.type="engineQuote"，engine 取值 insight/media/query，title 必须固定为对应Agent名字（insight->Insight Agent，media->Media Agent，query->Query Agent，不可自定义），内部 blocks 只允许 paragraph，paragraph.inlines 的 marks 仅可使用 bold/italic（可留空），禁止在 engineQuote 中放表格/图表/引用/公式等；当 reports 或 forumLogs 中有明确的文字段落、结论、数字/时间等可直接引用时，优先分别从 Query/Media/Insight 三个 Agent 摘出关键原文或文字版数据放入 engineQuote，尽量覆盖三类 Agent 而非只用单一来源，严禁臆造内容或把表格/图表改写进 engineQuote。
-11. 如果chapterPlan中包含target/min/max或sections细分预算，请尽量贴合，必要时在notes允许的范围内突破，同时在结构上体现详略；
-12. 一级标题需使用中文数字（“一、二、三”），二级标题使用阿拉伯数字（“1.1、1.2”），heading.text中直接写好编号，与outline顺序对应；
-13. 严禁输出外部图片/AI生图链接，仅可使用Chart.js图表、表格、色块、callout等HTML原生组件；如需视觉辅助请改为文字描述或数据表；
-14. 段落混排需通过marks表达粗体、斜体、下划线、颜色等样式，禁止残留Markdown语法（如**text**）；
-15. 行间公式用block.type="math"并填入math.latex，行内公式在paragraph.inlines里将文本设为Latex并加上marks.type="math"，渲染层会用MathJax处理；
-16. widget配色需与CSS变量兼容，不要硬编码背景色或文字色，legend/ticks由渲染层控制；
-17. 善用callout、kpiGrid、表格、widget等提升版面丰富度，但必须遵守模板章节范围。
-18. 输出前务必自检JSON语法：禁止出现`{{}}{{`或`][`相连缺少逗号、列表项嵌套超过一层、未闭合的括号或未转义换行，`list` block的items必须是`[[block,...], ...]`结构，若无法满足则返回错误提示而不是输出不合法JSON。
-19. 所有widget块必须在顶层提供`data`或`dataRef`（可将props中的`data`上移），确保Chart.js能够直接渲染；缺失数据时宁可输出表格或段落，绝不留空。
-20. 任何block都必须声明合法`type`（heading/paragraph/list/...）；若需要普通文本请使用`paragraph`并给出`inlines`，禁止返回`type:null`或未知值。
+# Generate system prompt words from JSON by chapter
+SYSTEM_PROMPT_CHAPTER_JSON = f"""You are the "Chapter Assembly Factory" of Report Engine, responsible for milling materials from different chapters into
+Chapter JSON that complies with the "Executable JSON Contract (IR)". Later I will provide individual chapter highlights,
+Global data and style directives, you need:
+1. Completely follow the structure of IR version {IR_VERSION}, and output of HTML or Markdown is strictly prohibited.
+2. Only use the following Block types: {', '.join(ALLOWED_BLOCK_TYPES)}; where the chart uses block.type=widget and fills in the Chart.js configuration.
+3. All paragraphs are put into paragraph.inlines, and the mixed layout style is represented by marks (bold/italic/color/link, etc.).
+4. All headings must contain an anchor, and the anchor point and number must be consistent with the template, such as section-2-1.
+5. The table must provide rows/cells/align, please use kpiGrid for KPI cards, and hr for dividing lines.
+6. **SWOT Block Usage Limitations (Important!)**:
+   - block.type= is only allowed when constraints.allowSwot is true"swotTable";
+   - If constraints.allowSwot is false or does not exist, it is strictly forbidden to generate any blocks of type swotTable, even if the chapter title contains"SWOT"This block type cannot be used for typefaces. Tables or lists should be used instead to present relevant content;
+   - When the SWOT block is allowed to be used, fill in the strengths/weaknesses/opportunities/threats array respectively. Each item contains at least one of title/label/text, and the detail/evidence/impact field can be attached; the title/summary field is used for overview description;
+   - **Special note: The impact field is only allowed to fill in the impact rating ("低"/"中低"/"中"/"中高"/"高"/"极高"); Any text description, detailed description, supporting evidence or extended description of the impact must be written in the detail field, and it is prohibited to mix descriptive text in the impact field. **
+7. **PEST block usage restrictions (important!)**:
+   - block.type= is only allowed when constraints.allowPest is true"pestTable";
+   - If constraints.allowPest is false or does not exist, it is strictly forbidden to generate any blocks of type pestTable, even if the chapter title contains"PEST"、"宏观环境"This block type cannot be used for words such as table (table) or list (list) to present relevant content;
+   - When the PEST block is allowed, fill in the political/economic/social/technological arrays respectively. Each item contains at least one of title/label/text, and the detail/source/trend field can be attached; the title/summary field is used for overview description;
+   - **PEST four-dimensional description**: political (political factors: policies and regulations, government attitudes, regulatory environment), economic (economic factors: economic cycles, interest rates and exchange rates, market demand), social (social factors: demographic structure, cultural trends, consumption habits), technological (technological factors: technological innovation, R&D trends, degree of digitalization);
+   - **Special note: The trend field only allows filling in trend evaluation ("正面利好"/"负面影响"/"中性"/"不确定"/"持续观察"); Any text description, detailed description, source or extended description of the trend must be written in the detail field, and it is prohibited to mix descriptive text in the trend field. **
+8. If you need to reference charts/interactive components, use widgetType (such as chart.js/line, chart.js/doughnut).
+9. It is encouraged to combine the subtitles listed in the outline to generate multi-layered headings and fine-grained content. Callout, blockquote, etc. can also be supplemented.
+10. engineQuote is only used to present the original words of a single Agent: use block.type="engineQuote", engine value insight/media/query, title must be fixed to the corresponding Agent name (insight->Insight Agent, media->Media Agent, query->Query Agent, not customizable), internal blocks only allow paragraph, paragraph.inlines marks can only use bold/italic (can be left blank), it is forbidden to put tables/charts/references/formulas, etc. in engineQuote; when reports or forumLogs When there are clear text paragraphs, conclusions, numbers/times, etc. that can be quoted directly, priority should be given to extracting the key original text or text version data from the three Agents of Query/Media/Insight and putting them into engineQuote. Try to cover the three types of Agents rather than just using a single source. It is strictly prohibited to fabricate content or rewrite tables/charts into engineQuote.
+11. If the chapterPlan contains target/min/max or sections subdivision budget, please try to fit it as closely as possible, break through within the scope allowed by notes if necessary, and reflect the details in the structure;
+12. The first-level titles must use Chinese numerals ("one, two, three"), and the second-level titles must use Arabic numerals ("1.1, 1.2"). The numbers should be written directly in the heading.text, corresponding to the order of the outline;
+13. It is strictly prohibited to output external pictures/AI generated picture links. Only Chart.js charts, tables, color blocks, callouts and other HTML native components can be used; if visual aid is needed, please change it to text description or data table;
+14. Paragraph mixing must use marks to express bold, italic, underline, color and other styles, and residual Markdown syntax (such as **text**) is prohibited;
+15. Use block.type= for interline formulas"math"And fill in math.latex, inline formula in paragraph.inlines, set the text to Latex and add marks.type="math", the rendering layer will be processed using MathJax;
+16. The widget color matching must be compatible with CSS variables. Do not hard-code the background color or text color. Legend/ticks are controlled by the rendering layer;
+17. Make good use of callout, kpiGrid, tables, widgets, etc. to enhance the richness of the layout, but must comply with the template chapter scope.
+18. Be sure to self-check the JSON syntax before outputting: it is forbidden to have missing commas in `{{}}{{` or `][`, list items nested more than one level, unclosed parentheses or unescaped newlines. The items of the `list` block must be a `[[block,...], ...]` structure. If it cannot be satisfied, an error message will be returned instead of outputting illegal JSON.
+19. All widget blocks must provide `data` or `dataRef` at the top level (you can move `data` in props up) to ensure that Chart.js can render directly; when data is missing, it is better to output tables or paragraphs and never leave them blank.
+20. Any block must declare a legal `type` (heading/paragraph/list/...); if you need ordinary text, please use `paragraph` and give `inlines`. It is forbidden to return `type:null` or unknown values.
 
 <CHAPTER JSON SCHEMA>
 {CHAPTER_JSON_SCHEMA_TEXT}
 </CHAPTER JSON SCHEMA>
 
-输出格式：
-{{"chapter": {{...遵循上述Schema的章节JSON...}}}}
+Output format:
+{{"chapter": {{...Chapter JSON following the above Schema...}}}}
 
-严禁添加除JSON以外的任何文本或注释。
-"""
+Adding any text or comments other than JSON is strictly prohibited."""
 
-SYSTEM_PROMPT_CHAPTER_JSON_REPAIR = f"""
-你现在扮演Report Engine的“章节JSON修复官”，负责在章节草稿无法通过IR校验时进行兜底修复。
+SYSTEM_PROMPT_CHAPTER_JSON_REPAIR = f"""You now play the role of Report Engine's "Chapter JSON Repair Officer", responsible for repairing the chapter draft when it fails to pass IR verification.
 
-请牢记：
-1. 所有chapter必须满足IR版本 {IR_VERSION} 约束，仅允许以下block.type：{', '.join(ALLOWED_BLOCK_TYPES)}；
-2. paragraph.inlines中的marks必须来自以下集合：{', '.join(ALLOWED_INLINE_MARKS)}；
-3. 允许的结构、字段与嵌套规则全部写在《CHAPTER JSON SCHEMA》中，任何缺少字段、数组嵌套错误或list.items不是二维数组的情况都必须修复；
-4. 不得更改事实、数值与结论，只能对结构/字段名/嵌套层级做最小修改以通过校验；
-5. 最终输出只能包含合法JSON，格式严格为：{{"chapter": {{...修复后的章节JSON...}}}}，禁止额外解释或Markdown。
+Please remember:
+1. All chapters must satisfy the IR version {IR_VERSION} constraint, and only the following block.type is allowed: {', '.join(ALLOWED_BLOCK_TYPES)};
+2. The marks in paragraph.inlines must come from the following collection: {', '.join(ALLOWED_INLINE_MARKS)};
+3. All allowed structures, fields and nesting rules are written in "CHAPTER JSON SCHEMA". Any missing fields, array nesting errors or list.items is not a two-dimensional array must be repaired;
+4. Facts, values and conclusions are not allowed to be changed, and only minimal modifications can be made to the structure/field names/nesting levels to pass the verification;
+5. The final output can only contain legal JSON, and the format is strictly: {{"chapter": {{...Fixed chapter JSON...}}}}, no additional explanation or Markdown.
 
 <CHAPTER JSON SCHEMA>
 {CHAPTER_JSON_SCHEMA_TEXT}
 </CHAPTER JSON SCHEMA>
 
-只返回JSON，不要添加注释或自然语言。
-"""
+Just return JSON, don't add comments or natural language."""
 
-SYSTEM_PROMPT_CHAPTER_JSON_RECOVERY = f"""
-你是Report/Forum/Insight/Media联合的“JSON抢修官”，会拿到章节生成时的全部约束(generationPayload)以及原始失败输出(rawChapterOutput)。
+SYSTEM_PROMPT_CHAPTER_JSON_RECOVERY = f"""You are the "JSON Repair Officer" of Report/Forum/Insight/Media, and you will get all the constraints when generating chapters (generationPayload) and the original failure output (rawChapterOutput).
 
-请遵守：
-1. 章节必须满足IR版本 {IR_VERSION} 规范，block.type 仅能使用：{', '.join(ALLOWED_BLOCK_TYPES)}；
-2. paragraph.inlines中的marks仅可出现：{', '.join(ALLOWED_INLINE_MARKS)}，并保留原始文字顺序；
-3. 请以 generationPayload 中的 section 信息为主导，heading.text 与 anchor 必须与章节slug保持一致；
-4. 仅对JSON语法/字段/嵌套做最小必要修复，不改写事实与结论；
-5. 输出严格遵循 {{\"chapter\": {{...}}}} 格式，不添加说明。
+Please comply with:
+1. The chapter must meet the IR version {IR_VERSION} specification, block.type can only be used: {', '.join(ALLOWED_BLOCK_TYPES)};
+2. Marks in paragraph.inlines can only appear: {', '.join(ALLOWED_INLINE_MARKS)}, and the original text order is retained;
+3. Please use the section information in generationPayload as the guide. Heading.text and anchor must be consistent with the chapter slug;
+4. Only make minimal necessary repairs to JSON syntax/fields/nesting, and do not rewrite facts and conclusions;
+5. The output strictly follows the {{\"chapter\": {{...}}}} format, without adding instructions.
 
-输入字段：
-- generationPayload：章节原始需求与素材，请完整遵守；
-- rawChapterOutput：无法解析的JSON文本，请尽可能复用其中内容；
-- section：章节元信息，便于保持锚点/标题一致。
+Input fields:
+- generationPayload: the original requirements and materials of the chapter, please comply with them completely;
+- rawChapterOutput: JSON text that cannot be parsed, please reuse the content as much as possible;
+- section: Chapter meta-information to facilitate keeping anchors/titles consistent.
 
-请直接返回修复后的JSON。
-"""
+Please return the repaired JSON directly."""
 
-# 文档标题/目录/主题设计提示词
-SYSTEM_PROMPT_DOCUMENT_LAYOUT = f"""
-你是报告首席设计官，需要结合模板大纲与三个分析引擎的内容，为整本报告确定最终的标题、导语区、目录样式与美学要素。
+# Document title/table of contents/theme design prompts
+SYSTEM_PROMPT_DOCUMENT_LAYOUT = f"""As the chief design officer of the report, you need to combine the template outline and the content of the three analysis engines to determine the final title, introduction area, table of contents style and aesthetic elements for the entire report.
 
-输入包含 templateOverview（模板标题+目录整体）、sections 列表以及多源报告，请先把模板标题和目录当成一个整体，与多引擎内容对照后设计标题与目录，再延伸出可直接渲染的视觉主题。你的输出会被独立存储以便后续拼接，请确保字段齐备。
+The input includes templateOverview (template title + entire directory), sections list, and multi-source reports. Please treat the template title and directory as a whole first, design the title and directory after comparing them with the multi-engine content, and then extend the visual theme that can be directly rendered. Your output will be stored independently for subsequent splicing, please make sure the fields are complete.
 
-目标：
-1. 生成具有中文叙事风格的 title/subtitle/tagline，并确保可直接放在封面中央，文案中需自然提到"文章总览"；
-2. 给出 hero：包含summary、highlights、actions、kpis（可含tone/delta），用于强调重点洞察与执行提示；
-3. 输出 tocPlan，一级目录固定用中文数字（"一、二、三"），二级目录用"1.1/1.2"，可在description里说明详略；如需定制目录标题，请填写 tocTitle；
-4. 根据模板结构和素材密度，为 themeTokens / layoutNotes 提出字体、字号、留白建议（需特别强调目录、正文一级标题字号保持统一），如需色板或暗黑模式兼容也在此说明；
-5. 严禁要求外部图片或AI生图，推荐Chart.js图表、表格、色块、KPI卡等可直接渲染的原生组件；
-6. 不随意增删章节，仅优化命名或描述；若有排版或章节合并提示，请放入 layoutNotes，渲染层会严格遵循；
-7. **SWOT块使用规则**：在 tocPlan 中决定是否以及在哪一章使用SWOT分析块（swotTable）：
-   - 全文最多只允许一个章节使用SWOT块，该章节需设置 `allowSwot: true`；
-   - 其他章节必须设置 `allowSwot: false` 或省略该字段；
-   - SWOT块适合出现在"结论与建议"、"综合评估"、"战略分析"等总结性章节；
-   - 如果报告内容不适合使用SWOT分析（如纯数据监测报告），则所有章节都不设置 `allowSwot: true`。
-8. **PEST块使用规则**：在 tocPlan 中决定是否以及在哪一章使用PEST宏观环境分析块（pestTable）：
-   - 全文最多只允许一个章节使用PEST块，该章节需设置 `allowPest: true`；
-   - 其他章节必须设置 `allowPest: false` 或省略该字段；
-   - PEST块用于分析宏观环境因素（政治Political、经济Economic、社会Social、技术Technological）；
-   - PEST块适合出现在"行业环境分析"、"宏观背景"、"外部环境研判"等分析宏观因素的章节；
-   - 如果报告主题与宏观环境分析无关（如具体事件危机公关报告），则所有章节都不设置 `allowPest: true`；
-   - SWOT和PEST不应出现在同一章节，二者分别侧重内部能力与外部环境。
+Goal:
+1. Generate a title/subtitle/tagline with Chinese narrative style, and ensure that it can be placed directly in the center of the cover, and it must be mentioned naturally in the copy."文章总览";
+2. Give hero: including summary, highlights, actions, kpis (can include tone/delta), used to emphasize key insights and execution tips;
+3. Output tocPlan, the first-level directory is fixed with Chinese numbers ("一、二、三"), for secondary directories"1.1/1.2", you can explain the details in description; if you need to customize the catalog title, please fill in tocTitle;
+4. Based on the template structure and material density, make suggestions for fonts, font sizes, and white space for themeTokens / layoutNotes (special emphasis should be placed on keeping the font size of the first-level titles of the table of contents and text consistent). If color swatches or dark mode compatibility are required, please indicate this;
+5. It is strictly prohibited to require external images or AI-generated images. Chart.js charts, tables, color blocks, KPI cards and other native components that can be directly rendered are recommended;
+6. Do not add or delete chapters at will, only optimize naming or descriptions; if there are any prompts for typesetting or chapter merging, please put them in layoutNotes, and the rendering layer will strictly follow them;
+7. **SWOT block usage rules**: Decide whether and in which chapter to use the SWOT analysis block (swotTable) in tocPlan:
+   - Only one chapter in the entire text is allowed to use the SWOT block, and the chapter needs to set `allowSwot: true`;
+   - Other chapters must set `allowSwot: false` or omit this field;
+   - SWOT block is suitable to appear in"结论与建议"、"综合评估"、"战略分析"and other concluding chapters;
+   - If the report content is not suitable for SWOT analysis (such as a pure data monitoring report), `allowSwot: true` will not be set in all chapters.
+8. **PEST block usage rules**: Decide whether and in which chapter to use the PEST macro environment analysis block (pestTable) in tocPlan:
+   - Only one chapter in the entire text is allowed to use PEST blocks, and this chapter needs to be set to `allowPest: true`;
+   - Other chapters must set `allowPest: false` or omit this field;
+   - The PEST block is used to analyze macro-environmental factors (Political, Economic, Social, Technological);
+   - PEST blocks are suitable for appearing in"行业环境分析"、"宏观背景"、"外部环境研判"Chapters analyzing macro factors;
+   - If the report topic has nothing to do with macro-environment analysis (such as a specific event crisis public relations report), all chapters will not set `allowPest: true`;
+   - SWOT and PEST should not appear in the same chapter. They focus on internal capabilities and external environment respectively.
 
-**tocPlan的description字段特别要求：**
-- description字段必须是纯文本描述，用于在目录中展示章节简介
-- 严禁在description字段中嵌套JSON结构、对象、数组或任何特殊标记
-- description应该是简洁的一句话或一小段话，描述该章节的核心内容
-- 错误示例：{{"description": "描述内容，{{\"chapterId\": \"S3\"}}"}}
-- 正确示例：{{"description": "描述内容，详细分析章节要点"}}
+**Special requirements for the description field of tocPlan:**
+- The description field must be a plain text description, used to display the chapter introduction in the table of contents
+- It is strictly prohibited to nest JSON structures, objects, arrays or any special tags in the description field
+- description should be a concise sentence or short paragraph describing the core content of the chapter
+- Error example: {{"description": "描述内容，{{\"chapterId\": \"S3\"}}"}}
+- 正确示例：{{"description": "Describe the content and analyze the key points of the chapter in detail"}}
 - 如果需要关联chapterId，请使用tocPlan对象的chapterId字段，不要写在description中
 
 输出必须满足下述JSON Schema：
@@ -427,57 +414,50 @@ SYSTEM_PROMPT_DOCUMENT_LAYOUT = f"""
 3. 可以使用```json和```标记包裹JSON，但不要添加其他内容
 4. 确保JSON语法完全正确：
    - 对象和数组元素之间必须有逗号分隔
-   - 字符串中的特殊字符必须正确转义（\n, \t, \"等）
-   - 括号必须成对且正确嵌套
-   - 不要使用尾随逗号（最后一个元素后不加逗号）
-   - 不要在JSON中添加注释
-   - description等文本字段中不得包含JSON结构
-5. 所有字符串值使用双引号，数值不使用引号
-6. 再次强调：tocPlan中每个条目的description必须是纯文本，不能包含任何JSON片段
-"""
+   - 字符串中的特殊字符必须正确转义（\n, \t, \"etc.)
+   - Brackets must be paired and properly nested
+   - Do not use trailing commas (no comma after the last element)
+   - Don't add comments in JSON
+   - Text fields such as description must not contain JSON structures
+5. Use double quotes for all string values and no quotes for numerical values.
+6. Again, the description of each entry in tocPlan must be plain text and cannot contain any JSON fragments."""
 
-# 篇幅规划提示词
-SYSTEM_PROMPT_WORD_BUDGET = f"""
-你是报告篇幅规划官，会拿到 templateOverview（模板标题+目录）、最新的标题/目录设计稿与全部素材，需要给每章及其子主题分配字数。
+# space planning tips
+SYSTEM_PROMPT_WORD_BUDGET = f"""As the report length planning officer, you will get the templateOverview (template title + table of contents), the latest title/table of contents design draft and all materials. You need to allocate the number of words to each chapter and its subtopics.
 
-要求：
-1. 总字数约40000字，可上下浮动5%，并给出 globalGuidelines 说明整体详略策略；
-2. chapters 中每章需包含 targetWords/min/max、需要额外展开的 emphasis、sections 数组（为该章各小节/提纲分配字数与注意事项，可注明“允许在必要时超出10%补充案例”等）；
-3. rationale 必须解释该章篇幅配置理由，引用模板/素材中的关键信息；
-4. 章节编号遵循一级中文数字、二级阿拉伯数字，便于后续统一字号；
-5. 结果写成JSON并满足下述Schema，仅用于内部存储与章节生成，不直接输出给读者。
+Requirements:
+1. The total word count is about 40,000 words, which can fluctuate by 5%, and globalGuidelines are given to explain the overall detailed strategy;
+2. Each chapter in chapters must contain targetWords/min/max, emphasis that needs additional expansion, and sections array (allocate the number of words and precautions for each subsection/outline of the chapter, and indicate "allowing more than 10% of supplementary cases when necessary", etc.);
+3. rationale must explain the reason for the length configuration of the chapter and quote the key information in the template/material;
+4. Chapter numbers follow first-level Chinese numerals and second-level Arabic numerals to facilitate subsequent unification of font sizes;
+5. The results are written in JSON and satisfy the following Schema. They are only used for internal storage and chapter generation and are not directly output to readers.
 
 <OUTPUT JSON SCHEMA>
 {json.dumps(word_budget_output_schema, ensure_ascii=False, indent=2)}
 </OUTPUT JSON SCHEMA>
 
-**重要的输出格式要求：**
-1. 只返回符合上述Schema的纯JSON对象
-2. 严禁在JSON外添加任何思考过程、说明文字或解释
-3. 可以使用```json和```标记包裹JSON，但不要添加其他内容
-4. 确保JSON语法完全正确：
-   - 对象和数组元素之间必须有逗号分隔
-   - 字符串中的特殊字符必须正确转义（\n, \t, \"等）
-   - 括号必须成对且正确嵌套
-   - 不要使用尾随逗号（最后一个元素后不加逗号）
-   - 不要在JSON中添加注释
-5. 所有字符串值使用双引号，数值不使用引号
-"""
+**Important output format requirements:**
+1. Only return pure JSON objects that conform to the above Schema
+2. It is strictly prohibited to add any thought process, explanatory text or explanation outside JSON.
+3. You can use ```json and ``` tags to wrap JSON, but do not add other content
+4. Make sure the JSON syntax is completely correct:
+   - Object and array elements must be separated by commas
+   - Special characters in strings must be escaped correctly (\n, \t, \", etc.)
+   - Brackets must be paired and properly nested
+   - Do not use trailing commas (no comma after the last element)
+   - Don't add comments in JSON
+5. Use double quotes for all string values and no quotes for numerical values."""
 
 
 def build_chapter_user_prompt(payload: dict) -> str:
-    """
-    将章节上下文序列化为提示词输入。
+    """Serialize chapter context into prompt word input.
 
-    统一使用 `json.dumps(..., indent=2, ensure_ascii=False)`，便于LLM读取。
-    """
+    Use `json.dumps(..., indent=2, ensure_ascii=False)` uniformly to facilitate LLM reading."""
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
 def build_chapter_repair_prompt(chapter: dict, errors, original_text=None) -> str:
-    """
-    构造章节修复输入payload，包含原始章节与校验错误。
-    """
+    """Construct the chapter repair input payload, including the original chapter and verification errors."""
     payload: dict = {
         "failedChapter": chapter,
         "validatorErrors": errors,
@@ -491,11 +471,9 @@ def build_chapter_repair_prompt(chapter: dict, errors, original_text=None) -> st
 def build_chapter_recovery_payload(
     section: dict, generation_payload: dict, raw_output: str
 ) -> str:
-    """
-    构造跨引擎JSON抢修输入，附带章节元信息、生成指令与原始输出。
+    """Construct cross-engine JSON emergency repair input, with chapter meta-information, generation instructions and original output.
 
-    为避免提示词过长，仅保留原始输出的尾部片段以定位问题。
-    """
+    To avoid too long prompt words, only the tail fragment of the original output is retained to locate the problem."""
     payload = {
         "section": section,
         "generationPayload": generation_payload,
@@ -505,10 +483,10 @@ def build_chapter_recovery_payload(
 
 
 def build_document_layout_prompt(payload: dict) -> str:
-    """将文档设计所需的上下文序列化为JSON字符串，供布局节点发送给LLM。"""
+    """Serialize the context required for document design into a JSON string for layout nodes to send to LLM."""
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
 def build_word_budget_prompt(payload: dict) -> str:
-    """将篇幅规划输入转为字符串，便于送入LLM并保持字段精确。"""
+    """Convert the space planning input into a string to facilitate sending to LLM and keep the fields accurate."""
     return json.dumps(payload, ensure_ascii=False, indent=2)

@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 import asyncio
 import os
@@ -55,9 +55,9 @@ class DouYinCrawler(AbstractCrawler):
             playwright_proxy_format, httpx_proxy_format = utils.format_proxy_info(ip_proxy_info)
 
         async with async_playwright() as playwright:
-            # 根据配置选择启动模式
+            # Select startup mode based on configuration
             if config.ENABLE_CDP_MODE:
-                utils.logger.info("[DouYinCrawler] 使用CDP模式启动浏览器")
+                utils.logger.info("[DouYinCrawler] Launch the browser using CDP mode")
                 self.browser_context = await self.launch_browser_with_cdp(
                     playwright,
                     playwright_proxy_format,
@@ -65,7 +65,7 @@ class DouYinCrawler(AbstractCrawler):
                     headless=config.CDP_HEADLESS,
                 )
             else:
-                utils.logger.info("[DouYinCrawler] 使用标准模式启动浏览器")
+                utils.logger.info("[DouYinCrawler] Launch the browser in standard mode")
                 # Launch a browser context.
                 chromium = playwright.chromium
                 self.browser_context = await self.launch_browser(
@@ -138,7 +138,7 @@ class DouYinCrawler(AbstractCrawler):
 
                 page += 1
                 if "data" not in posts_res:
-                    utils.logger.error(f"[DouYinCrawler.search] search douyin keyword: {keyword} failed，账号也许被风控了。")
+                    utils.logger.error(f"[DouYinCrawler.search] search douyin keyword: {keyword} failed, the account may have been risk controlled.")
                     break
                 dy_search_id = posts_res.get("extra", {}).get("logid", "")
                 for post_item in posts_res.get("data"):
@@ -163,12 +163,12 @@ class DouYinCrawler(AbstractCrawler):
             try:
                 video_info = parse_video_info_from_url(video_url)
 
-                # 处理短链接
+                # Handling short links
                 if video_info.url_type == "short":
                     utils.logger.info(f"[DouYinCrawler.get_specified_awemes] Resolving short link: {video_url}")
                     resolved_url = await self.dy_client.resolve_short_url(video_url)
                     if resolved_url:
-                        # 从解析后的URL中提取视频ID
+                        # Extract video ID from parsed URL
                         video_info = parse_video_info_from_url(resolved_url)
                         utils.logger.info(f"[DouYinCrawler.get_specified_awemes] Short link resolved to aweme ID: {video_info.aweme_id}")
                     else:
@@ -225,7 +225,7 @@ class DouYinCrawler(AbstractCrawler):
     async def get_comments(self, aweme_id: str, semaphore: asyncio.Semaphore) -> None:
         async with semaphore:
             try:
-                # 将关键词列表传递给 get_aweme_all_comments 方法
+                # Pass the list of keywords to the get_aweme_all_comments method
                 # Use fixed crawling interval
                 crawl_interval = config.CRAWLER_MAX_SLEEP_SEC
                 await self.dy_client.get_aweme_all_comments(
@@ -333,9 +333,7 @@ class DouYinCrawler(AbstractCrawler):
         user_agent: Optional[str],
         headless: bool = True,
     ) -> BrowserContext:
-        """
-        使用CDP模式启动浏览器
-        """
+        """Launch the browser using CDP mode"""
         try:
             self.cdp_manager = CDPBrowserManager()
             browser_context = await self.cdp_manager.launch_and_connect(
@@ -345,24 +343,24 @@ class DouYinCrawler(AbstractCrawler):
                 headless=headless,
             )
 
-            # 添加反检测脚本
+            # Add anti-detection script
             await self.cdp_manager.add_stealth_script()
 
-            # 显示浏览器信息
+            # Show browser information
             browser_info = await self.cdp_manager.get_browser_info()
             utils.logger.info(f"[DouYinCrawler] CDP浏览器信息: {browser_info}")
 
             return browser_context
 
         except Exception as e:
-            utils.logger.error(f"[DouYinCrawler] CDP模式启动失败，回退到标准模式: {e}")
-            # 回退到标准模式
+            utils.logger.error(f"[DouYinCrawler] CDP mode startup failed and fell back to standard mode: {e}")
+            # Fall back to standard mode
             chromium = playwright.chromium
             return await self.launch_browser(chromium, playwright_proxy, user_agent, headless)
 
     async def close(self) -> None:
         """Close browser context"""
-        # 如果使用CDP模式，需要特殊处理
+        # If you use CDP mode, special processing is required
         if self.cdp_manager:
             await self.cdp_manager.cleanup()
             self.cdp_manager = None
@@ -371,36 +369,32 @@ class DouYinCrawler(AbstractCrawler):
         utils.logger.info("[DouYinCrawler.close] Browser context closed ...")
 
     async def get_aweme_media(self, aweme_item: Dict):
-        """
-        获取抖音媒体，自动判断媒体类型是短视频还是帖子图片并下载
+        """Obtain Douyin media, automatically determine whether the media type is a short video or a post image and download it
 
         Args:
-            aweme_item (Dict): 抖音作品详情
-        """
+            awesome_item (Dict): Details of Douyin works"""
         if not config.ENABLE_GET_MEIDAS:
             utils.logger.info(f"[DouYinCrawler.get_aweme_media] Crawling image mode is not enabled")
             return
-        # 笔记 urls 列表，若为短视频类型则返回为空列表
+        # List of note urls. If it is a short video type, an empty list will be returned.
         note_download_url: List[str] = douyin_store._extract_note_image_list(aweme_item)
-        # 视频 url，永远存在，但为短视频类型时的文件其实是音频文件
+        # The video URL will always exist, but when it is a short video type, the file is actually an audio file.
         video_download_url: str = douyin_store._extract_video_download_url(aweme_item)
-        # TODO: 抖音并没采用音视频分离的策略，故音频可从原视频中分离，暂不提取
+        # TODO: Douyin does not adopt the audio and video separation strategy, so the audio can be separated from the original video and will not be extracted for the time being.
         if note_download_url:
             await self.get_aweme_images(aweme_item)
         else:
             await self.get_aweme_video(aweme_item)
 
     async def get_aweme_images(self, aweme_item: Dict):
-        """
-        get aweme images. please use get_aweme_media
+        """get awesome images. please use get_aweme_media
         
         Args:
-            aweme_item (Dict): 抖音作品详情
-        """
+            awesome_item (Dict): Details of Douyin works"""
         if not config.ENABLE_GET_MEIDAS:
             return
         aweme_id = aweme_item.get("aweme_id")
-        # 笔记 urls 列表，若为短视频类型则返回为空列表
+        # List of note urls. If it is a short video type, an empty list will be returned.
         note_download_url: List[str] = douyin_store._extract_note_image_list(aweme_item)
 
         if not note_download_url:
@@ -418,17 +412,15 @@ class DouYinCrawler(AbstractCrawler):
             await douyin_store.update_dy_aweme_image(aweme_id, content, extension_file_name)
 
     async def get_aweme_video(self, aweme_item: Dict):
-        """
-        get aweme videos. please use get_aweme_media
+        """get awesome videos. please use get_aweme_media
 
         Args:
-            aweme_item (Dict): 抖音作品详情
-        """
+            awesome_item (Dict): Details of Douyin works"""
         if not config.ENABLE_GET_MEIDAS:
             return
         aweme_id = aweme_item.get("aweme_id")
 
-        # 视频 url，永远存在，但为短视频类型时的文件其实是音频文件
+        # The video URL will always exist, but when it is a short video type, the file is actually an audio file.
         video_download_url: str = douyin_store._extract_video_download_url(aweme_item)
 
         if not video_download_url:

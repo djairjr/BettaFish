@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
@@ -72,7 +72,7 @@ async def update_weibo_note(note_item: Dict):
     content_text = mblog.get("text")
     clean_text = re.sub(r"<.*?>", "", content_text)
     save_content_item = {
-        # 微博信息
+        # Weibo information
         "note_id": note_id,
         "content": clean_text,
         "create_time": utils.rfc2822_to_timestamp(mblog.get("created_at")),
@@ -82,9 +82,9 @@ async def update_weibo_note(note_item: Dict):
         "shared_count": str(mblog.get("reposts_count", 0)),
         "last_modify_ts": utils.get_current_timestamp(),
         "note_url": f"https://m.weibo.cn/detail/{note_id}",
-        "ip_location": mblog.get("region_name", "").replace("发布于 ", ""),
+        "ip_location": mblog.get("region_name", "").replace("Posted in", ""),
 
-        # 用户信息
+        # User information
         "user_id": str(user_info.get("id")),
         "nickname": user_info.get("screen_name", ""),
         "gender": user_info.get("gender", ""),
@@ -137,10 +137,10 @@ async def update_weibo_note_comment(note_id: str, comment_item: Dict):
         "sub_comment_count": str(comment_item.get("total_number", 0)),
         "comment_like_count": str(comment_item.get("like_count", 0)),
         "last_modify_ts": utils.get_current_timestamp(),
-        "ip_location": comment_item.get("source", "").replace("来自", ""),
+        "ip_location": comment_item.get("source", "").replace("from", ""),
         "parent_comment_id": comment_item.get("rootid", ""),
 
-        # 用户信息
+        # User information
         "user_id": str(user_info.get("id")),
         "nickname": user_info.get("screen_name", ""),
         "gender": user_info.get("gender", ""),
@@ -181,7 +181,7 @@ async def save_creator(user_id: str, user_info: Dict):
         'gender': '女' if user_info.get('gender') == "f" else '男',
         'avatar': user_info.get('avatar_hd'),
         'desc': user_info.get('description'),
-        'ip_location': user_info.get("source", "").replace("来自", ""),
+        'ip_location': user_info.get("source", "").replace("from", ""),
         'follows': user_info.get('follow_count', ''),
         'fans': user_info.get('followers_count', ''),
         'tag_list': '',

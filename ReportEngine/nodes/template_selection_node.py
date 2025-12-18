@@ -1,9 +1,7 @@
-"""
-模板选择节点。
+"""Template selection node.
 
-综合用户查询、三引擎报告、论坛日志与本地模板库，
-调用LLM挑选最合适的报告骨架。
-"""
+Comprehensive user query, three-engine report, forum log and local template library,
+Call LLM to select the most appropriate report skeleton."""
 
 import os
 import json
@@ -16,24 +14,20 @@ from ..utils.json_parser import RobustJSONParser, JSONParseError
 
 
 class TemplateSelectionNode(BaseNode):
-    """
-    模板选择处理节点。
+    """Template selection processing node.
 
-    负责准备模板候选列表、构建提示词、解析LLM返回结果，
-    并在失败时回退到内置模板。
-    """
+    Responsible for preparing template candidate lists, constructing prompt words, and parsing LLM return results.
+    and fall back to built-in templates on failure."""
     
     def __init__(self, llm_client, template_dir: str = "ReportEngine/report_template"):
-        """
-        初始化模板选择节点
+        """Initialize template selection node
 
         Args:
-            llm_client: LLM客户端
-            template_dir: 模板目录路径
-        """
+            llm_client: LLM client
+            template_dir: template directory path"""
         super().__init__(llm_client, "TemplateSelectionNode")
         self.template_dir = template_dir
-        # 初始化鲁棒JSON解析器，启用所有修复策略
+        # Initialize robust JSON parser, enable all repair strategies
         self.json_parser = RobustJSONParser(
             enable_json_repair=True,
             enable_llm_repair=False,
@@ -41,72 +35,68 @@ class TemplateSelectionNode(BaseNode):
         )
         
     def run(self, input_data: Dict[str, Any], **kwargs) -> Dict[str, Any]:
-        """
-        执行模板选择。
+        """Perform template selection.
         
         Args:
-            input_data: 包含查询和报告内容的字典
-                - query: 原始查询
-                - reports: 三个子agent的报告列表
-                - forum_logs: 论坛日志内容
+            input_data: dictionary containing query and report content
+                - query: original query
+                - reports: report list of three sub-agents
+                - forum_logs: Forum log content
                 
         Returns:
-            选择的模板信息，包含名称、内容与选择理由
-        """
-        logger.info("开始模板选择...")
+            Selected template information, including name, content and reason for selection"""
+        logger.info("Start template selection...")
         
         query = input_data.get('query', '')
         reports = input_data.get('reports', [])
         forum_logs = input_data.get('forum_logs', '')
         
-        # 获取可用模板
+        # Get available templates
         available_templates = self._get_available_templates()
         
         if not available_templates:
-            logger.info("未找到预设模板，使用内置默认模板")
+            logger.info("No preset template found, use built-in default template")
             return self._get_fallback_template()
         
-        # 使用LLM进行模板选择
+        # Using LLM for template selection
         try:
             llm_result = self._llm_template_selection(query, reports, forum_logs, available_templates)
             if llm_result:
                 return llm_result
         except Exception as e:
-            logger.exception(f"LLM模板选择失败: {str(e)}")
+            logger.exception(f"LLM template selection failed: {str(e)}")
         
-        # 如果LLM选择失败，使用备选方案
+        # If LLM selection fails, use alternatives
         return self._get_fallback_template()
     
 
     
     def _llm_template_selection(self, query: str, reports: List[Any], forum_logs: str, 
                               available_templates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        """
-        使用LLM进行模板选择。
+        """Use LLM for template selection.
 
-        构造模板列表与报告摘要 → 调用LLM → 解析JSON →
-        验证模板是否存在并返回标准结构。
+        Construct template list and report summary → Call LLM → Parse JSON →
+        Verify that the template exists and return the standard structure.
 
-        参数:
-            query: 用户输入的主题词。
-            reports: 多个分析引擎的报告内容。
-            forum_logs: 论坛日志，可能为空。
-            available_templates: 本地可用模板清单。
+        Parameters:
+            query: the keyword entered by the user.
+            reports: Report content of multiple analysis engines.
+            forum_logs: Forum logs, may be empty.
+            available_templates: List of locally available templates.
 
-        返回:
-            dict | None: 若LLM成功返回合法结果则包含模板信息，否则为None。
-        """
-        logger.info("尝试使用LLM进行模板选择...")
+        Return:
+            dict | None: Contains template information if LLM successfully returns a legal result, otherwise None."""
+        logger.info("Try using LLM for template selection...")
         
-        # 构建模板列表
+        # Build template list
         template_list = "\n".join([f"- {t['name']}: {t['description']}" for t in available_templates])
         
-        # 构建报告内容摘要
+        # Build a report summary
         reports_summary = ""
         if reports:
-            reports_summary = "\n\n=== 分析引擎报告内容 ===\n"
+            reports_summary = "\n\n=== Analysis engine report content ===\n"
             for i, report in enumerate(reports, 1):
-                # 获取报告内容，支持不同的数据格式
+                # Get report content and support different data formats
                 if isinstance(report, dict):
                     content = report.get('content', str(report))
                 elif hasattr(report, 'content'):
@@ -114,88 +104,86 @@ class TemplateSelectionNode(BaseNode):
                 else:
                     content = str(report)
                 
-                # 截断过长的内容，保留前1000个字符
+                # Truncate overly long content and keep the first 1000 characters
                 if len(content) > 1000:
-                    content = content[:1000] + "...(内容已截断)"
+                    content = content[:1000] + "...(Content has been truncated)"
                 
-                reports_summary += f"\n报告{i}内容:\n{content}\n"
+                reports_summary += f"\nReport{i}content:\n{content}\n"
         
-        # 构建论坛日志摘要
+        # Build forum log summary
         forum_summary = ""
         if forum_logs and forum_logs.strip():
-            forum_summary = "\n\n=== 三个引擎的讨论内容 ===\n"
-            # 截断过长的日志内容，保留前800个字符
+            forum_summary = "\n\n=== Discussion content of three engines ===\n"
+            # Truncate overly long log content and retain the first 800 characters
             if len(forum_logs) > 800:
-                forum_content = forum_logs[:800] + "...(讨论内容已截断)"
+                forum_content = forum_logs[:800] + "...(discussion has been truncated)"
             else:
                 forum_content = forum_logs
             forum_summary += forum_content
         
-        user_message = f"""查询内容: {query}
+        user_message = f"""Query content: {query}
 
-报告数量: {len(reports)} 个分析引擎报告
-论坛日志: {'有' if forum_logs else '无'}
+Number of reports: {len(reports)} analytics engine reports
+Forum logs: {'yes' if forum_logs else 'no'}
 {reports_summary}{forum_summary}
 
-可用模板:
+Available templates:
 {template_list}
 
-请根据查询内容、报告内容和论坛日志的具体情况，选择最合适的模板。"""
+Please choose the most appropriate template based on the query content, report content, and forum logs."""
         
-        # 调用LLM
+        # Call LLM
         response = self.llm_client.stream_invoke_to_string(SYSTEM_PROMPT_TEMPLATE_SELECTION, user_message)
 
-        # 检查响应是否为空
+        # Check if the response is empty
         if not response or not response.strip():
-            logger.error("LLM返回空响应")
+            logger.error("LLM returns empty response")
             return None
 
-        logger.info(f"LLM原始响应: {response}")
+        logger.info(f"LLM original response: {response}")
 
-        # 尝试解析JSON响应，使用鲁棒解析器
+        # Try parsing the JSON response, using a robust parser
         try:
             result = self.json_parser.parse(
                 response,
-                context_name="模板选择",
+                context_name="Template selection",
                 expected_keys=["template_name", "selection_reason"],
             )
 
-            # 验证选择的模板是否存在
+            # Verify that the selected template exists
             selected_template_name = result.get('template_name', '')
             for template in available_templates:
                 if template['name'] == selected_template_name or selected_template_name in template['name']:
-                    logger.info(f"LLM选择模板: {selected_template_name}")
+                    logger.info(f"LLM selection template: {selected_template_name}")
                     return {
                         'template_name': template['name'],
                         'template_content': template['content'],
                         'selection_reason': result.get('selection_reason', 'LLM智能选择')
                     }
 
-            logger.error(f"LLM选择的模板不存在: {selected_template_name}")
+            logger.error(f"The template selected by LLM does not exist: {selected_template_name}")
             return None
 
         except JSONParseError as e:
-            logger.error(f"JSON解析失败: {str(e)}")
-            # 尝试从文本响应中提取模板信息
+            logger.error(f"JSON parsing failed: {str(e)}")
+            # Try to extract template information from text response
             return self._extract_template_from_text(response, available_templates)
     
 
     def _extract_template_from_text(self, response: str, available_templates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        """
-        从文本响应中提取模板信息。
+        """Extract template information from text responses.
 
-        当LLM未输出合法JSON时，尝试匹配模板名称关键字做降级。
+        When LLM does not output valid JSON, it tries to downgrade by matching the template name keyword.
 
-        参数:
-            response: 非结构化的LLM文本。
-            available_templates: 可选模板列表。
+        Parameters:
+            response: unstructured LLM text.
+            available_templates: List of optional templates.
 
-        返回:
-            dict | None: 匹配成功时返回模板详情，否则为None。
-        """
-        logger.info("尝试从文本响应中提取模板信息")
+        Return:
+            dict | None: Returns the template details if the match is successful, otherwise None."""
+        logger.info("Try to extract template information from text response")
         
-        # 查找响应中是否包含模板名称
+        # Find if the template name is included in the response
         for template in available_templates:
             template_name_variants = [
                 template['name'],
@@ -205,7 +193,7 @@ class TemplateSelectionNode(BaseNode):
             
             for variant in template_name_variants:
                 if variant in response:
-                    logger.info(f"在响应中找到模板: {template['name']}")
+                    logger.info(f"Template found in response: {template['name']}")
                     return {
                         'template_name': template['name'],
                         'template_content': template['content'],
@@ -215,21 +203,19 @@ class TemplateSelectionNode(BaseNode):
         return None
     
     def _get_available_templates(self) -> List[Dict[str, Any]]:
-        """
-        获取可用的模板列表。
+        """Get a list of available templates.
 
-        枚举模板目录下的 `.md` 文件并读取内容与描述字段。
+        Enumerate the `.md` files in the template directory and read the content and description fields.
 
-        返回:
-            list[dict]: 每项包含 name/path/content/description。
-        """
+        Return:
+            list[dict]: Each item contains name/path/content/description."""
         templates = []
         
         if not os.path.exists(self.template_dir):
-            logger.error(f"模板目录不存在: {self.template_dir}")
+            logger.error(f"Template directory does not exist: {self.template_dir}")
             return templates
         
-        # 查找所有markdown模板文件
+        # Find all markdown template files
         for filename in os.listdir(self.template_dir):
             if filename.endswith('.md'):
                 template_path = os.path.join(self.template_dir, filename)
@@ -247,37 +233,35 @@ class TemplateSelectionNode(BaseNode):
                         'description': description
                     })
                 except Exception as e:
-                    logger.exception(f"读取模板文件失败 {filename}: {str(e)}")
+                    logger.exception(f"Failed to read template file {filename}: {str(e)}")
         
         return templates
     
     def _extract_template_description(self, template_name: str) -> str:
-        """根据模板名称生成描述，方便LLM理解模板定位。"""
+        """Generate a description based on the template name to facilitate LLM's understanding of template positioning."""
         if '企业品牌' in template_name:
-            return "适用于企业品牌声誉和形象分析"
+            return "Suitable for corporate brand reputation and image analysis"
         elif '市场竞争' in template_name:
-            return "适用于市场竞争格局和对手分析"
+            return "Suitable for market competition landscape and opponent analysis"
         elif '日常' in template_name or '定期' in template_name:
-            return "适用于日常监测和定期汇报"
+            return "Suitable for daily monitoring and regular reporting"
         elif '政策' in template_name or '行业' in template_name:
-            return "适用于政策影响和行业动态分析"
+            return "Suitable for policy impact and industry dynamics analysis"
         elif '热点' in template_name or '社会' in template_name:
-            return "适用于社会热点和公共事件分析"
+            return "Suitable for analysis of social hot spots and public events"
         elif '突发' in template_name or '危机' in template_name:
-            return "适用于突发事件和危机公关"
+            return "Suitable for emergencies and crisis public relations"
         
-        return "通用报告模板"
+        return "Generic report template"
     
 
     
     def _get_fallback_template(self) -> Dict[str, Any]:
-        """
-        获取备用默认模板（空模板，让LLM自行发挥）。
+        """Get an alternate default template (empty template, let LLM do its thing).
 
-        返回:
-            dict: 结构体字段与LLM返回一致，方便直接替换。
-        """
-        logger.info("未找到合适模板，使用空模板让LLM自行发挥")
+        Return:
+            dict: The structure field is consistent with the LLM return, making it easy to replace directly."""
+        logger.info("No suitable template found, use empty template to let LLM play its role")
         
         return {
             'template_name': '自由发挥模板',

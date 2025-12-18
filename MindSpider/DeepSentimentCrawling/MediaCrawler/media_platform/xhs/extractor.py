@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 import json
 import re
@@ -20,16 +20,15 @@ class XiaoHongShuExtractor:
         pass
 
     def extract_note_detail_from_html(self, note_id: str, html: str) -> Optional[Dict]:
-        """从html中提取笔记详情
+        """Extract note details from html
 
         Args:
-            html (str): html字符串
+            html (str): html string
 
         Returns:
-            Dict: 笔记详情字典
-        """
+            Dict: Dictionary of note details"""
         if "noteDetailMap" not in html:
-            # 这种情况要么是出了验证码了，要么是笔记不存在
+            # In this case, either a verification code has been generated or the note does not exist.
             return None
 
         state = re.findall(r"window.__INITIAL_STATE__=({.*})</script>", html)[
@@ -41,14 +40,13 @@ class XiaoHongShuExtractor:
         return None
 
     def extract_creator_info_from_html(self, html: str) -> Optional[Dict]:
-        """从html中提取用户信息
+        """Extract user information from html
 
         Args:
-            html (str): html字符串
+            html (str): html string
 
         Returns:
-            Dict: 用户信息字典
-        """
+            Dict: User information dictionary"""
         match = re.search(
             r"<script>window.__INITIAL_STATE__=(.+)<\/script>", html, re.M
         )

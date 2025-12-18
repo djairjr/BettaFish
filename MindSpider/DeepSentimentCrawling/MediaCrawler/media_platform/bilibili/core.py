@@ -1,17 +1,17 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2023/12/2 18:44
-# @Desc    : B站爬虫
+# @Desc: B station crawler
 
 import asyncio
 import os
@@ -64,9 +64,9 @@ class BilibiliCrawler(AbstractCrawler):
             playwright_proxy_format, httpx_proxy_format = utils.format_proxy_info(ip_proxy_info)
 
         async with async_playwright() as playwright:
-            # 根据配置选择启动模式
+            # Select startup mode based on configuration
             if config.ENABLE_CDP_MODE:
-                utils.logger.info("[BilibiliCrawler] 使用CDP模式启动浏览器")
+                utils.logger.info("[BilibiliCrawler] Launch the browser using CDP mode")
                 self.browser_context = await self.launch_browser_with_cdp(
                     playwright,
                     playwright_proxy_format,
@@ -74,7 +74,7 @@ class BilibiliCrawler(AbstractCrawler):
                     headless=config.CDP_HEADLESS,
                 )
             else:
-                utils.logger.info("[BilibiliCrawler] 使用标准模式启动浏览器")
+                utils.logger.info("[BilibiliCrawler] Launch the browser in standard mode")
                 # Launch a browser context.
                 chromium = playwright.chromium
                 self.browser_context = await self.launch_browser(chromium, None, self.user_agent, headless=config.HEADLESS)
@@ -138,32 +138,30 @@ class BilibiliCrawler(AbstractCrawler):
         start: str = config.START_DAY,
         end: str = config.END_DAY,
     ) -> Tuple[str, str]:
-        """
-        获取 bilibili 作品发布日期起始时间戳 pubtime_begin_s 与发布日期结束时间戳 pubtime_end_s
+        """Get the start timestamp of the release date of bilibili works pubtime_begin_s and the end timestamp of the release date pubtime_end_s
         ---
-        :param start: 发布日期起始时间，YYYY-MM-DD
-        :param end: 发布日期结束时间，YYYY-MM-DD
+        :param start: Release date start time, YYYY-MM-DD
+        :param end: Release date end time, YYYY-MM-DD
 
         Note
         ---
-        - 搜索的时间范围为 start 至 end，包含 start 和 end
-        - 若要搜索同一天的内容，为了包含 start 当天的搜索内容，则 pubtime_end_s 的值应该为 pubtime_begin_s 的值加上一天再减去一秒，即 start 当天的最后一秒
-            - 如仅搜索 2024-01-05 的内容，pubtime_begin_s = 1704384000，pubtime_end_s = 1704470399
-              转换为可读的 datetime 对象：pubtime_begin_s = datetime.datetime(2024, 1, 5, 0, 0)，pubtime_end_s = datetime.datetime(2024, 1, 5, 23, 59, 59)
-        - 若要搜索 start 至 end 的内容，为了包含 end 当天的搜索内容，则 pubtime_end_s 的值应该为 pubtime_end_s 的值加上一天再减去一秒，即 end 当天的最后一秒
-            - 如搜索 2024-01-05 - 2024-01-06 的内容，pubtime_begin_s = 1704384000，pubtime_end_s = 1704556799
-              转换为可读的 datetime 对象：pubtime_begin_s = datetime.datetime(2024, 1, 5, 0, 0)，pubtime_end_s = datetime.datetime(2024, 1, 6, 23, 59, 59)
-        """
-        # 转换 start 与 end 为 datetime 对象
+        - The search time range is from start to end, including start and end
+        - To search for content on the same day, in order to include the search content on the start day, the value of pubtime_end_s should be the value of pubtime_begin_s plus one day and minus one second, which is the last second of the start day.
+            - If only the content of 2024-01-05 is searched, pubtime_begin_s = 1704384000, pubtime_end_s = 1704470399
+              Convert to readable datetime objects: pubtime_begin_s = datetime.datetime(2024, 1, 5, 0, 0), pubtime_end_s = datetime.datetime(2024, 1, 5, 23, 59, 59)
+        - If you want to search the content from start to end, in order to include the search content of end day, the value of pubtime_end_s should be the value of pubtime_end_s plus one day and minus one second, that is, the last second of end day.
+            - If searching for the content of 2024-01-05 - 2024-01-06, pubtime_begin_s = 1704384000, pubtime_end_s = 1704556799
+              Convert to readable datetime objects: pubtime_begin_s = datetime.datetime(2024, 1, 5, 0, 0), pubtime_end_s = datetime.datetime(2024, 1, 6, 23, 59, 59)"""
+        # Convert start and end to datetime objects
         start_day: datetime = datetime.strptime(start, "%Y-%m-%d")
         end_day: datetime = datetime.strptime(end, "%Y-%m-%d")
         if start_day > end_day:
             raise ValueError("Wrong time range, please check your start and end argument, to ensure that the start cannot exceed end")
-        elif start_day == end_day:  # 搜索同一天的内容
-            end_day = (start_day + timedelta(days=1) - timedelta(seconds=1))  # 则将 end_day 设置为 start_day + 1 day - 1 second
-        else:  # 搜索 start 至 end
-            end_day = (end_day + timedelta(days=1) - timedelta(seconds=1))  # 则将 end_day 设置为 end_day + 1 day - 1 second
-        # 将其重新转换为时间戳
+        elif start_day == end_day:  # Search content from the same day
+            end_day = (start_day + timedelta(days=1) - timedelta(seconds=1))  # Then set end_day to start_day + 1 day - 1 second
+        else:  # Search start to end
+            end_day = (end_day + timedelta(days=1) - timedelta(seconds=1))  # Then set end_day to end_day + 1 day - 1 second
+        # Convert it back to timestamp
         return str(int(start_day.timestamp())), str(int(end_day.timestamp()))
 
     async def search_by_keywords(self):
@@ -193,8 +191,8 @@ class BilibiliCrawler(AbstractCrawler):
                     page=page,
                     page_size=bili_limit_count,
                     order=SearchOrderType.DEFAULT,
-                    pubtime_begin_s=0,  # 作品发布日期起始时间戳
-                    pubtime_end_s=0,  # 作品发布日期结束日期时间戳
+                    pubtime_begin_s=0,  # Work release date start timestamp
+                    pubtime_end_s=0,  # Work release date end date timestamp
                 )
                 video_list: List[Dict] = videos_res.get("result")
 
@@ -512,9 +510,7 @@ class BilibiliCrawler(AbstractCrawler):
         user_agent: Optional[str],
         headless: bool = True,
     ) -> BrowserContext:
-        """
-        使用CDP模式启动浏览器
-        """
+        """Launch the browser using CDP mode"""
         try:
             self.cdp_manager = CDPBrowserManager()
             browser_context = await self.cdp_manager.launch_and_connect(
@@ -524,22 +520,22 @@ class BilibiliCrawler(AbstractCrawler):
                 headless=headless,
             )
 
-            # 显示浏览器信息
+            # Show browser information
             browser_info = await self.cdp_manager.get_browser_info()
-            utils.logger.info(f"[BilibiliCrawler] CDP浏览器信息: {browser_info}")
+            utils.logger.info(f"[BilibiliCrawler] CDP browser information: {browser_info}")
 
             return browser_context
 
         except Exception as e:
-            utils.logger.error(f"[BilibiliCrawler] CDP模式启动失败，回退到标准模式: {e}")
-            # 回退到标准模式
+            utils.logger.error(f"[BilibiliCrawler] CDP mode startup failed and fell back to standard mode: {e}")
+            # Fall back to standard mode
             chromium = playwright.chromium
             return await self.launch_browser(chromium, playwright_proxy, user_agent, headless)
 
     async def close(self):
         """Close browser context"""
         try:
-            # 如果使用CDP模式，需要特殊处理
+            # If you use CDP mode, special processing is required
             if self.cdp_manager:
                 await self.cdp_manager.cleanup()
                 self.cdp_manager = None

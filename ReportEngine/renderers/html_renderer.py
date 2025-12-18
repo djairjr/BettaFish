@@ -1,11 +1,9 @@
-"""
-基于章节IR的HTML/PDF渲染器，实现与示例报告一致的交互与视觉。
+"""HTML/PDF renderer based on chapter IR, achieving consistent interaction and visual appearance with the sample report.
 
-新增要点：
-1. 内置Chart.js数据验证/修复（ChartValidator+LLM兜底），杜绝非法配置导致的注入或崩溃；
-2. 将MathJax/Chart.js/html2canvas/jspdf等依赖内联并带CDN fallback，适配离线或被墙环境；
-3. 预置思源宋体子集的Base64字体，用于PDF/HTML一体化导出，避免缺字或额外系统依赖。
-"""
+New points:
+1. Built-in Chart.js data verification/repair (ChartValidator+LLM) to prevent injection or crash caused by illegal configuration;
+2. Inline MathJax/Chart.js/html2canvas/jspdf and other dependencies with CDN fallback to adapt to offline or blocked environments;
+3. Preset Base64 fonts of Siyuan Songti subset for PDF/HTML integrated export to avoid missing characters or additional system dependencies."""
 
 from __future__ import annotations
 
@@ -33,21 +31,19 @@ from ReportEngine.utils.chart_review_service import get_chart_review_service
 
 
 class HTMLRenderer:
-    """
-    Document IR → HTML 渲染器。
+    """Document IR → HTML renderer.
 
-    - 读取 IR metadata/chapters，将结构映射为响应式HTML；
-    - 动态构造目录、锚点、Chart.js脚本及互动逻辑；
-    - 提供主题变量、编号映射等辅助功能。
-    """
+    - Read IR metadata/chapters and map the structure to responsive HTML;
+    - Dynamically construct directories, anchors, Chart.js scripts and interactive logic;
+    - Provides auxiliary functions such as theme variables and number mapping."""
 
-    # ===== 渲染流程快速导览（便于定位注释） =====
-    # render(document_ir): 单一公开入口，负责重置状态并串联 _render_head / _render_body。
-    # _render_head: 根据 themeTokens 构造 <head>，注入 CSS 变量、内联库与 CDN fallback。
-    # _render_body: 组装页面骨架（页眉/header、目录/toc、章节/blocks、脚本注水）。
-    # _render_header: 生成顶部按钮区域，按钮 ID 及事件在 _hydration_script 内绑定。
-    # _render_widget: 处理 Chart.js/词云组件，先校验与修复数据，再写入 <script type="application/json"> 配置。
-    # _hydration_script: 输出末尾 JS，负责按钮交互（主题切换/打印/导出）与图表实例化。
+    # ===== Quick tour of the rendering process (easy to locate comments) =====
+    # render(document_ir): Single public entry, responsible for resetting state and concatenating _render_head / _render_body.
+    # _render_head: Construct <head> based on themeTokens, inject CSS variables, inline libraries and CDN fallback.
+    # _render_body: Assemble the page skeleton (header/header, table of contents/toc, chapters/blocks, script injection).
+    # _render_header: Generate the top button area, and the button ID and event are bound in _hydration_script.
+    # _render_widget: Process the Chart.js/word cloud component, first verify and repair the data, and then write the <script type="application/json"> configuration.
+    # _hydration_script: JS at the end of the output, responsible for button interaction (theme switching/printing/exporting) and chart instantiation.
 
     CALLOUT_ALLOWED_TYPES = {
         "paragraph",
@@ -78,21 +74,19 @@ class HTMLRenderer:
     )
 
     def __init__(self, config: Dict[str, Any] | None = None):
-        """
-        初始化渲染器缓存并允许注入额外配置。
+        """Initializes the renderer cache and allows additional configuration to be injected.
 
-        参数层级说明：
-        - config: dict | None，供调用方临时覆盖主题/调试开关等，优先级最高；
-          典型键值：
-            - themeOverride: 覆盖元数据里的 themeTokens；
-            - enableDebug: bool，是否输出额外日志。
-        内部状态：
-        - self.document/metadata/chapters：保存一次渲染周期的 IR；
-        - self.widget_scripts：收集图表配置 JSON，后续在 _render_body 尾部注水；
-        - self._lib_cache/_pdf_font_base64：缓存本地库与字体，避免重复IO；
-        - self.chart_validator/chart_repairer：Chart.js 配置的本地与 LLM 兜底修复器；
-        - self.chart_validation_stats：记录总量/修复来源/失败数量，便于日志审计。
-        """
+        Parameter level description:
+        - config: dict | None, for the caller to temporarily override theme/debugging switches, etc., with the highest priority;
+          Typical key values:
+            - themeOverride: override themeTokens in metadata;
+            - enableDebug: bool, whether to output additional logs.
+        Internal status:
+        - self.document/metadata/chapters: Save the IR of a rendering cycle;
+        - self.widget_scripts: Collect chart configuration JSON, and then inject water at the end of _render_body;
+        - self._lib_cache/_pdf_font_base64: cache local libraries and fonts to avoid repeated IO;
+        - self.chart_validator/chart_repairer: local and LLM repairer configured by Chart.js;
+        - self.chart_validation_stats: Record the total amount/repair source/number of failures to facilitate log auditing."""
         self.config = config or {}
         self.document: Dict[str, Any] = {}
         self.widget_scripts: List[str] = []
@@ -111,24 +105,24 @@ class HTMLRenderer:
         self._lib_cache: Dict[str, str] = {}
         self._pdf_font_base64: str | None = None
 
-        # 初始化图表验证和修复器
+        # Initialize chart validator and fixer
         self.chart_validator = create_chart_validator()
         llm_repair_fns = create_llm_repair_functions()
         self.chart_repairer = create_chart_repairer(
             validator=self.chart_validator,
             llm_repair_fns=llm_repair_fns
         )
-        # 打印LLM修复函数状态
+        # Print LLM repair function status
         self._llm_repair_count = len(llm_repair_fns)
         if not llm_repair_fns:
-            logger.warning("HTMLRenderer: 未配置任何LLM API，图表API修复功能不可用")
+            logger.warning("HTMLRenderer: No LLM API is configured, chart API fix function is not available")
         else:
-            logger.info(f"HTMLRenderer: 已配置 {len(llm_repair_fns)} 个LLM修复函数")
-        # 记录修复失败的图表，避免多次触发LLM循环修复
+            logger.info(f"HTMLRenderer: {len(llm_repair_fns)} LLM repair functions configured")
+        # Record repair failed charts to avoid triggering LLM cycle repair multiple times
         self._chart_failure_notes: Dict[str, str] = {}
         self._chart_failure_recorded: set[str] = set()
 
-        # 统计信息
+        # Statistics
         self.chart_validation_stats = {
             'total': 0,
             'valid': 0,
@@ -139,24 +133,22 @@ class HTMLRenderer:
 
     @staticmethod
     def _get_lib_path() -> Path:
-        """获取第三方库文件的目录路径"""
+        """Get the directory path of the third-party library file"""
         return Path(__file__).parent / "libs"
 
     @staticmethod
     def _get_font_path() -> Path:
-        """返回PDF导出所需字体的路径（使用优化后的子集字体）"""
+        """Returns the path to the font required for PDF export (using optimized subset fonts)"""
         return Path(__file__).parent / "assets" / "fonts" / "SourceHanSerifSC-Medium-Subset.ttf"
 
     def _load_lib(self, filename: str) -> str:
-        """
-        加载指定的第三方库文件内容
+        """Load the contents of the specified third-party library file
 
-        参数:
-            filename: 库文件名
+        Parameters:
+            filename: library file name
 
-        返回:
-            str: 库文件的JavaScript代码内容
-        """
+        Return:
+            str: JavaScript code content of the library file"""
         if filename in self._lib_cache:
             return self._lib_cache[filename]
 
@@ -167,14 +159,14 @@ class HTMLRenderer:
                 self._lib_cache[filename] = content
                 return content
         except FileNotFoundError:
-            print(f"警告: 库文件 {filename} 未找到，将使用CDN备用链接")
+            print(f"Warning: Library file {filename} not found, CDN alternative link will be used")
             return ""
         except Exception as e:
-            print(f"警告: 读取库文件 {filename} 时出错: {e}")
+            print(f"Warning: Error reading library file {filename}: {e}")
             return ""
 
     def _load_pdf_font_data(self) -> str:
-        """加载PDF字体的Base64数据，避免重复读取大型文件"""
+        """Load Base64 data of PDF fonts to avoid repeated reading of large files"""
         if self._pdf_font_base64 is not None:
             return self._pdf_font_base64
         font_path = self._get_font_path()
@@ -183,14 +175,14 @@ class HTMLRenderer:
             self._pdf_font_base64 = base64.b64encode(data).decode("ascii")
             return self._pdf_font_base64
         except FileNotFoundError:
-            logger.warning("PDF字体文件缺失：%s", font_path)
+            logger.warning("PDF font file missing: %s", font_path)
         except Exception as exc:
-            logger.warning("读取PDF字体文件失败：%s (%s)", font_path, exc)
+            logger.warning("Failed to read PDF font file: %s (%s)", font_path, exc)
         self._pdf_font_base64 = ""
         return self._pdf_font_base64
 
     def _reset_chart_validation_stats(self) -> None:
-        """重置图表校验统计并清除失败计数标记"""
+        """Reset chart validation statistics and clear failure count flags"""
         self.chart_validation_stats = {
             'total': 0,
             'valid': 0,
@@ -198,7 +190,7 @@ class HTMLRenderer:
             'repaired_api': 0,
             'failed': 0
         }
-        # 保留失败原因缓存，但重置本次渲染的计数
+        # Keep the failure reason cache, but reset the count for this rendering
         self._chart_failure_recorded = set()
 
     def _build_script_with_fallback(
@@ -209,56 +201,53 @@ class HTMLRenderer:
         lib_name: str,
         is_defer: bool = False
     ) -> str:
-        """
-        构建带有CDN fallback机制的script标签
+        """Build script tags with CDN fallback mechanism
 
-        策略：
-        1. 优先嵌入本地库代码
-        2. 添加检测脚本，验证库是否成功加载
-        3. 如果检测失败，动态加载CDN版本作为备用
+        Strategy:
+        1. Prioritize embedding local library code
+        2. Add a detection script to verify whether the library is loaded successfully
+        3. If the detection fails, dynamically load the CDN version as a backup
 
-        参数:
-            inline_code: 本地库的JavaScript代码内容
-            cdn_url: CDN备用链接
-            check_expression: JavaScript表达式，用于检测库是否加载成功
-            lib_name: 库名称（用于日志输出）
-            is_defer: 是否使用defer属性
+        Parameters:
+            inline_code: JavaScript code content of the native library
+            cdn_url: CDN alternative link
+            check_expression: JavaScript expression, used to detect whether the library is loaded successfully
+            lib_name: library name (for log output)
+            is_defer: whether to use the defer attribute
 
-        返回:
-            str: 完整的script标签HTML
-        """
+        Return:
+            str: complete script tag HTML"""
         defer_attr = ' defer' if is_defer else ''
 
         if inline_code:
-            # 嵌入本地库代码，并添加fallback检测
-            return f"""
-  <script{defer_attr}>
-    // {lib_name} - 嵌入式版本
+            # Embed native library code and add fallback detection
+            return f"""<script{defer_attr}>
+    // {lib_name} - embedded version
     try {{
       {inline_code}
     }} catch (e) {{
-      console.error('{lib_name}嵌入式加载失败:', e);
+      console.error('{lib_name}embedded loading failed:', e);
     }}
   </script>
   <script{defer_attr}>
-    // {lib_name} - CDN Fallback检测
+    // {lib_name} - CDN Fallback detection
     (function() {{
       var checkLib = function() {{
         if (!({check_expression})) {{
-          console.warn('{lib_name}本地版本加载失败，正在从CDN加载备用版本...');
+          console.warn('{lib_name} local version failed to load, loading alternate version from CDN...');
           var script = document.createElement('script');
           script.src = '{cdn_url}';
           script.onerror = function() {{
-            console.error('{lib_name} CDN备用加载也失败了');
+            console.error('{lib_name} CDN alternative loading also failed');
           }};
           script.onload = function() {{
-            console.log('{lib_name} CDN备用版本加载成功');
+            console.log('{lib_name} CDN alternative version loaded successfully');
           }};
           document.head.appendChild(script);
         }}
       }};
 
-      // 延迟检测，确保嵌入代码有时间执行
+      // Delay detection to ensure that the embedded code has time to execute
       if (document.readyState === 'loading') {{
         document.addEventListener('DOMContentLoaded', function() {{
           setTimeout(checkLib, 100);
@@ -269,32 +258,30 @@ class HTMLRenderer:
     }})();
   </script>""".strip()
         else:
-            # 本地文件读取失败，直接使用CDN
-            logger.warning(f"{lib_name}本地文件未找到或读取失败，将直接使用CDN")
+            # Failed to read local files, use CDN directly
+            logger.warning(f"The {lib_name} local file was not found or failed to be read. CDN will be used directly.")
             return f'  <script{defer_attr} src="{cdn_url}"></script>'
 
-    # ====== 公共入口 ======
+    # ====== Public entrance ======
 
     def render(
         self,
         document_ir: Dict[str, Any],
         ir_file_path: str | None = None
     ) -> str:
-        """
-        接收Document IR，重置内部状态并输出完整HTML。
+        """Receive Document IR, reset internal state and output full HTML.
 
-        参数:
-            document_ir: 由 DocumentComposer 生成的整本报告数据。
-            ir_file_path: 可选，IR 文件路径，提供时修复后会自动保存。
+        Parameters:
+            document_ir: The entire report data generated by DocumentComposer.
+            ir_file_path: Optional, IR file path, it will be automatically saved after repair when provided.
 
-        返回:
-            str: 可直接写入磁盘的完整HTML文档。
-        """
+        Return:
+            str: A complete HTML document that can be written directly to disk."""
         self.document = document_ir or {}
 
-        # 使用统一的 ChartReviewService 进行图表审查与修复
-        # 修复结果会直接回写到 document_ir，避免多次渲染重复修复
-        # review_document 返回本次会话的统计信息（线程安全）
+        # Chart review and repair using unified ChartReviewService
+        # The repair results will be written directly back to document_ir to avoid repeated repairs after multiple renderings.
+        # review_document returns the statistics of this session (thread-safe)
         chart_service = get_chart_review_service()
         review_stats = chart_service.review_document(
             self.document,
@@ -302,8 +289,8 @@ class HTMLRenderer:
             reset_stats=True,
             save_on_repair=bool(ir_file_path)
         )
-        # 同步统计信息到本地（用于兼容旧的 _log_chart_validation_stats）
-        # 使用返回的 ReviewStats 对象，而非共享的 chart_service.stats
+        # Synchronize statistics to local (for compatibility with old _log_chart_validation_stats)
+        # Use the returned ReviewStats object instead of the shared chart_service.stats
         self.chart_validation_stats.update(review_stats.to_dict())
 
         self.widget_scripts = []
@@ -323,22 +310,22 @@ class HTMLRenderer:
 
         metadata = self.metadata
         theme_tokens = metadata.get("themeTokens") or self.document.get("themeTokens", {})
-        title = metadata.get("title") or metadata.get("query") or "智能舆情报告"
+        title = metadata.get("title") or metadata.get("query") or "Intelligent public opinion report"
         hero_kpis = (metadata.get("hero") or {}).get("kpis")
         self.hero_kpi_signature = self._kpi_signature_from_items(hero_kpis)
 
         head = self._render_head(title, theme_tokens)
         body = self._render_body()
 
-        # 输出图表验证统计
+        # Output chart validation statistics
         self._log_chart_validation_stats()
 
         return f"<!DOCTYPE html>\n<html lang=\"zh-CN\" class=\"no-js\">\n{head}\n{body}\n</html>"
 
-    # ====== 头部 / 正文 ======
+    # ====== Header/Text ======
 
     def _resolve_color_value(self, value: Any, fallback: str) -> str:
-        """从颜色token中提取字符串值"""
+        """Extract string value from color token"""
         if isinstance(value, str):
             value = value.strip()
             return value or fallback
@@ -353,7 +340,7 @@ class HTMLRenderer:
         return fallback
 
     def _resolve_color_family(self, value: Any, fallback: Dict[str, str]) -> Dict[str, str]:
-        """解析主/亮/暗三色，缺失时回落到默认值"""
+        """Parse the main/light/dark colors, and fall back to the default value if missing"""
         result = {
             "main": fallback.get("main", "#007bff"),
             "light": fallback.get("light", fallback.get("main", "#007bff")),
@@ -371,22 +358,20 @@ class HTMLRenderer:
         return result
 
     def _render_head(self, title: str, theme_tokens: Dict[str, Any]) -> str:
-        """
-        渲染<head>部分，加载主题CSS与必要的脚本依赖。
+        """Render the <head> section, loading the theme CSS and necessary script dependencies.
 
-        参数:
-            title: 页面title标签内容。
-            theme_tokens: 主题变量，用于注入CSS。支持层级：
+        Parameters:
+            title: The content of the page title tag.
+            theme_tokens: theme variables, used to inject CSS. Support levels:
               - colors: {primary/secondary/bg/text/card/border/...}
-              - typography: {fontFamily, fonts:{body,heading}}，body/heading 为空时回落到系统字体
+              - typography: {fontFamily, fonts:{body,heading}}, fall back to system font when body/heading is empty
               - spacing: {container,gutter/pagePadding}
 
-        返回:
-            str: head片段HTML。
-        """
+        Return:
+            str: head fragment HTML."""
         css = self._build_css(theme_tokens)
 
-        # 加载第三方库
+        # Load third-party libraries
         chartjs = self._load_lib("chart.js")
         chartjs_sankey = self._load_lib("chartjs-chart-sankey.js")
         html2canvas = self._load_lib("html2canvas.min.js")
@@ -394,8 +379,8 @@ class HTMLRenderer:
         mathjax = self._load_lib("mathjax.js")
         wordcloud2 = self._load_lib("wordcloud2.min.js")
 
-        # 生成嵌入式script标签，并为每个库添加CDN fallback机制
-        # Chart.js - 主要图表库
+        # Generate embedded script tags and add CDN fallback mechanism for each library
+        # Chart.js - The main charting library
         chartjs_tag = self._build_script_with_fallback(
             inline_code=chartjs,
             cdn_url="https://cdn.jsdelivr.net/npm/chart.js",
@@ -403,7 +388,7 @@ class HTMLRenderer:
             lib_name="Chart.js"
         )
 
-        # Chart.js Sankey插件
+        # Chart.js Sankey plugin
         sankey_tag = self._build_script_with_fallback(
             inline_code=chartjs_sankey,
             cdn_url="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@4",
@@ -411,7 +396,7 @@ class HTMLRenderer:
             lib_name="chartjs-chart-sankey"
         )
 
-        # wordcloud2 - 词云渲染
+        # wordcloud2 – word cloud rendering
         wordcloud_tag = self._build_script_with_fallback(
             inline_code=wordcloud2,
             cdn_url="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js",
@@ -419,7 +404,7 @@ class HTMLRenderer:
             lib_name="wordcloud2"
         )
 
-        # html2canvas - 用于截图
+        # html2canvas - for screenshots
         html2canvas_tag = self._build_script_with_fallback(
             inline_code=html2canvas,
             cdn_url="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
@@ -427,7 +412,7 @@ class HTMLRenderer:
             lib_name="html2canvas"
         )
 
-        # jsPDF - 用于PDF导出
+        # jsPDF - for PDF export
         jspdf_tag = self._build_script_with_fallback(
             inline_code=jspdf,
             cdn_url="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
@@ -435,7 +420,7 @@ class HTMLRenderer:
             lib_name="jsPDF"
         )
 
-        # MathJax - 数学公式渲染
+        # MathJax - Mathematical formula rendering
         mathjax_tag = self._build_script_with_fallback(
             inline_code=mathjax,
             cdn_url="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
@@ -444,7 +429,7 @@ class HTMLRenderer:
             is_defer=True
         )
 
-        # PDF字体数据不再嵌入HTML，减小文件体积
+        # PDF font data is no longer embedded in HTML, reducing file size
         pdf_font_script = ""
 
         return f"""
@@ -482,15 +467,13 @@ class HTMLRenderer:
 </head>""".strip()
 
     def _render_body(self) -> str:
-        """
-        拼装<body>结构，包含头部、导航、章节和脚本。
-        新版本：移除独立的cover section，标题合并到hero section中。
+        """Assemble the <body> structure, including header, navigation, chapters and scripts.
+        New version: Remove the independent cover section and merge the titles into the hero section.
 
-        返回:
-            str: body片段HTML。
-        """
+        Return:
+            str: body fragment HTML."""
         header = self._render_header()
-        # cover = self._render_cover()  # 不再单独渲染cover
+        # cover = self._render_cover() # No longer render cover separately
         hero = self._render_hero()
         toc_section = self._render_toc_section()
         chapters = "".join(self._render_chapter(chapter) for chapter in self.chapters)
@@ -500,7 +483,7 @@ class HTMLRenderer:
 <div id="export-overlay" class="export-overlay no-print" aria-hidden="true">
   <div class="export-dialog" role="status" aria-live="assertive">
     <div class="export-spinner" aria-hidden="true"></div>
-    <p class="export-status">正在导出PDF，请稍候...</p>
+    <p class="export-status">Exporting PDF, please wait...</p>
     <div class="export-progress" role="progressbar" aria-valuetext="正在导出">
       <div class="export-progress-bar"></div>
     </div>
@@ -521,25 +504,23 @@ class HTMLRenderer:
 {hydration}
 </body>""".strip()
 
-    # ====== 页眉 / 元信息 / 目录 ======
+    # ====== Header / Meta Information / Table of Contents ======
 
     def _render_header(self) -> str:
-        """
-        渲染吸顶头部，包含标题、副标题与功能按钮。
+        """Render the ceiling header, including title, subtitle and function buttons.
 
-        按钮/控件说明（ID 用于 _hydration_script 里绑定事件）：
-        - <theme-button id="theme-toggle" value="light" size="1.5">：自定义 Web Component，
-          `value` 初始主题(light/dark)，`size` 控制整体缩放；触发 `change` 事件时传递 detail: 'light'/'dark'。
-        - <button id="print-btn">：点击后 window.print()，用于导出/打印。
-        - <button id="export-btn">：隐藏的 PDF 导出按钮，显示时绑定 exportPdf()。
-          仅当依赖就绪或业务层开放导出时展示。
+        Button/control description (ID is used to bind events in _hydration_script):
+        - <theme-button id="theme-toggle" value="light" size="1.5">: Custom Web Component,
+          `value` initial theme (light/dark), `size` controls the overall zoom; pass detail: 'light'/'dark' when triggering the `change` event.
+        - <button id="print-btn">: After clicking window.print(), used for export/printing.
+        - <button id="export-btn">: Hidden PDF export button, bound to exportPdf() when displayed.
+          Displayed only when the dependency is ready or the business layer is open for export.
 
-        返回:
-            str: header HTML。
-        """
+        Return:
+            str: header HTML."""
         metadata = self.metadata
-        title = metadata.get("title") or "智能舆情分析报告"
-        subtitle = metadata.get("subtitle") or metadata.get("templateName") or "自动生成"
+        title = metadata.get("title") or "Intelligent public opinion analysis report"
+        subtitle = metadata.get("subtitle") or metadata.get("templateName") or "Automatically generated"
         return f"""
 <header class="report-header no-print">
   <div>
@@ -548,7 +529,7 @@ class HTMLRenderer:
     {self._render_tagline()}
   </div>
   <div class="header-actions">
-    <!-- 旧版日夜模式切换按钮（Web Component 风格）：
+    <!-- Old version of day and night mode switch button (Web Component style):
     <theme-button value="light" id="theme-toggle" size="1.5"></theme-button>
     -->
     <button id="theme-toggle-btn" class="action-btn theme-toggle-btn" type="button">
@@ -566,7 +547,7 @@ class HTMLRenderer:
       <svg class="btn-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
       </svg>
-      <span class="theme-label">切换模式</span>
+      <span class="theme-label">Switch mode</span>
     </button>
     <button id="print-btn" class="action-btn print-btn" type="button">
       <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -574,35 +555,30 @@ class HTMLRenderer:
         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
         <rect x="6" y="14" width="12" height="8"></rect>
       </svg>
-      <span>打印页面</span>
+      <span>Print page</span>
     </button>
-    <button id="export-btn" class="action-btn" type="button" style="display: none;">⬇️ 导出PDF</button>
+    <button id="export-btn" class="action-btn" type="button" style="display: none;">⬇️ Export PDF</button>
   </div>
-</header>
-""".strip()
+</header>""".strip()
 
     def _render_tagline(self) -> str:
-        """
-        渲染标题下方的标语，如无标语则返回空字符串。
+        """Render the slogan below the title, or return an empty string if there is no slogan.
 
-        返回:
-            str: tagline HTML或空串。
-        """
+        Return:
+            str: tagline HTML or empty string."""
         tagline = self.metadata.get("tagline")
         if not tagline:
             return ""
         return f'<p class="tagline">{self._escape_html(tagline)}</p>'
 
     def _render_cover(self) -> str:
-        """
-        文章开头的封面区，居中展示标题与“文章总览”提示。
+        """In the cover area at the beginning of the article, the title and "Article Overview" prompt are displayed in the center.
 
-        返回:
-            str: cover section HTML。
-        """
-        title = self.metadata.get("title") or "智能舆情报告"
+        Return:
+            str: cover section HTML."""
+        title = self.metadata.get("title") or "Intelligent public opinion report"
         subtitle = self.metadata.get("subtitle") or self.metadata.get("templateName") or ""
-        overview_hint = "文章总览"
+        overview_hint = "Article overview"
         return f"""
 <section class="cover">
   <p class="cover-hint">{overview_hint}</p>
@@ -612,19 +588,17 @@ class HTMLRenderer:
 """.strip()
 
     def _render_hero(self) -> str:
-        """
-        根据layout中的hero字段输出摘要/KPI/亮点区。
-        新版本：将标题和总览合并在一起，去掉椭圆背景。
+        """Output the summary/KPI/highlight area based on the hero field in the layout.
+        New version: Merge title and overview together, remove elliptical background.
 
-        返回:
-            str: hero区HTML，若无数据则为空字符串。
-        """
+        Return:
+            str: hero area HTML, if there is no data, it is an empty string."""
         hero = self.metadata.get("hero") or {}
         if not hero:
             return ""
 
-        # 获取标题和副标题
-        title = self.metadata.get("title") or "智能舆情报告"
+        # Get title and subtitle
+        title = self.metadata.get("title") or "Intelligent public opinion report"
         subtitle = self.metadata.get("subtitle") or self.metadata.get("templateName") or ""
 
         summary = hero.get("summary")
@@ -655,7 +629,7 @@ class HTMLRenderer:
         return f"""
 <section class="hero-section-combined">
   <div class="hero-header">
-    <p class="hero-hint">文章总览</p>
+    <p class="hero-hint">Article overview</p>
     <h1 class="hero-title">{self._escape_html(title)}</h1>
     <p class="hero-subtitle">{self._escape_html(subtitle)}</p>
   </div>
@@ -673,22 +647,20 @@ class HTMLRenderer:
 """.strip()
 
     def _render_meta_panel(self) -> str:
-        """当前需求不展示元信息，保留方法便于后续扩展"""
+        """The current requirement does not display meta-information, and the method is retained for subsequent expansion."""
         return ""
 
     def _render_toc_section(self) -> str:
-        """
-        生成目录模块，如无目录数据则返回空字符串。
+        """Generate a directory module, and return an empty string if there is no directory data.
 
-        返回:
-            str: toc HTML结构。
-        """
+        Return:
+            str: toc HTML structure."""
         if not self.toc_entries:
             return ""
         if self.toc_rendered:
             return ""
         toc_config = self.metadata.get("toc") or {}
-        toc_title = toc_config.get("title") or "📚 目录"
+        toc_title = toc_config.get("title") or "📚 Table of Contents"
         toc_items = "".join(
             self._format_toc_entry(entry)
             for entry in self.toc_entries
@@ -704,15 +676,13 @@ class HTMLRenderer:
 """.strip()
 
     def _collect_toc_entries(self, chapters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        根据metadata中的tocPlan或章节heading收集目录项。
+        """Collect table of contents items based on tocPlan or chapter heading in metadata.
 
-        参数:
-            chapters: Document IR中的章节数组。
+        Parameters:
+            chapters: Array of chapters in Document IR.
 
-        返回:
-            list[dict]: 规范化后的目录条目，包含level/text/anchor/description。
-        """
+        Return:
+            list[dict]: Normalized directory entry, including level/text/anchor/description."""
         metadata = self.metadata
         toc_config = metadata.get("toc") or {}
         custom_entries = toc_config.get("customEntries")
@@ -722,23 +692,23 @@ class HTMLRenderer:
             for entry in custom_entries:
                 anchor = entry.get("anchor") or self.chapter_anchor_map.get(entry.get("chapterId"))
 
-                # 验证anchor是否有效
+                # Verify whether anchor is valid
                 if not anchor:
                     logger.warning(
-                        f"目录项 '{entry.get('display') or entry.get('title')}' "
-                        f"缺少有效的anchor，已跳过"
+                        f"Directory entry '{entry.get('display') or entry.get('title')}'"
+                        f"Missing valid anchor, skipped"
                     )
                     continue
 
-                # 验证anchor是否在chapter_anchor_map中或在chapters的blocks中
+                # Verify whether the anchor is in chapter_anchor_map or in the blocks of chapters
                 anchor_valid = self._validate_toc_anchor(anchor, chapters)
                 if not anchor_valid:
                     logger.warning(
-                        f"目录项 '{entry.get('display') or entry.get('title')}' "
-                        f"的anchor '{anchor}' 在文档中未找到对应的章节"
+                        f"Directory entry '{entry.get('display') or entry.get('title')}'"
+                        f"The corresponding chapter of anchor '{anchor}' was not found in the document."
                     )
 
-                # 清理描述文本
+                # Clean up description text
                 description = entry.get("description")
                 if description:
                     description = self._clean_text_from_json_artifacts(description)
@@ -760,7 +730,7 @@ class HTMLRenderer:
                     if not anchor:
                         continue
                     mapped = self.heading_label_map.get(anchor, {})
-                    # 清理描述文本
+                    # Clean up description text
                     description = mapped.get("description")
                     if description:
                         description = self._clean_text_from_json_artifacts(description)
@@ -775,25 +745,23 @@ class HTMLRenderer:
         return entries
 
     def _validate_toc_anchor(self, anchor: str, chapters: List[Dict[str, Any]]) -> bool:
-        """
-        验证目录anchor是否在文档中存在对应的章节或heading。
+        """Verify whether the table of contents anchor has a corresponding chapter or heading in the document.
 
-        参数:
-            anchor: 需要验证的anchor
-            chapters: Document IR中的章节数组
+        Parameters:
+            anchor: anchor that needs to be verified
+            chapters: array of chapters in Document IR
 
-        返回:
-            bool: anchor是否有效
-        """
-        # 检查是否是章节anchor
+        Return:
+            bool: whether anchor is valid"""
+        # Check if it is a chapter anchor
         if anchor in self.chapter_anchor_map.values():
             return True
 
-        # 检查是否在heading_label_map中
+        # Check if it is in heading_label_map
         if anchor in self.heading_label_map:
             return True
 
-        # 检查章节的blocks中是否有这个anchor
+        # Check whether there is this anchor in the blocks of the chapter
         for chapter in chapters or []:
             chapter_anchor = chapter.get("anchor")
             if chapter_anchor == anchor:
@@ -807,7 +775,7 @@ class HTMLRenderer:
         return False
 
     def _prepare_chapters(self, chapters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """复制章节并展开其中序列化的block，避免渲染缺失"""
+        """Copy the chapter and expand the serialized blocks in it to avoid missing rendering"""
         prepared: List[Dict[str, Any]] = []
         for chapter in chapters or []:
             chapter_copy = copy.deepcopy(chapter)
@@ -816,7 +784,7 @@ class HTMLRenderer:
         return prepared
 
     def _expand_blocks_in_place(self, blocks: List[Dict[str, Any]] | None) -> List[Dict[str, Any]]:
-        """遍历block列表，将内嵌JSON串拆解为独立block"""
+        """Traverse the block list and disassemble the embedded JSON string into independent blocks"""
         expanded: List[Dict[str, Any]] = []
         for block in blocks or []:
             extras = self._extract_embedded_blocks(block)
@@ -826,13 +794,11 @@ class HTMLRenderer:
         return expanded
 
     def _extract_embedded_blocks(self, block: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        在block内部查找被误写成字符串的block列表，并返回补充的block
-        """
+        """Find the block list that is mistakenly written as a string inside the block and return the supplementary block"""
         extracted: List[Dict[str, Any]] = []
 
         def traverse(node: Any) -> None:
-            """递归遍历block树，识别text字段内潜在的嵌套block JSON"""
+            """Recursively traverse the block tree to identify potential nested block JSON within the text field"""
             if isinstance(node, dict):
                 for key, value in list(node.items()):
                     if key == "text" and isinstance(value, str):
@@ -850,9 +816,7 @@ class HTMLRenderer:
         return extracted
 
     def _decode_embedded_block_payload(self, raw: str) -> List[Dict[str, Any]] | None:
-        """
-        将字符串形式的block描述恢复为结构化列表。
-        """
+        """Restore the block description in string form to a structured list."""
         if not isinstance(raw, str):
             return None
         stripped = raw.strip()
@@ -883,12 +847,12 @@ class HTMLRenderer:
 
     @staticmethod
     def _looks_like_block(payload: Dict[str, Any]) -> bool:
-        """粗略判断dict是否符合block结构"""
+        """Roughly determine whether the dict conforms to the block structure"""
         if not isinstance(payload, dict):
             return False
         block_type = payload.get("type")
         if block_type and isinstance(block_type, str):
-            # 排除内联类型（inlineRun 等），它们不是块级元素
+            # Exclude inline types (inlineRun, etc.), which are not block-level elements
             inline_types = {"inlineRun", "inline", "text"}
             if block_type in inline_types:
                 return False
@@ -897,13 +861,13 @@ class HTMLRenderer:
         return any(key in payload for key in structural_keys)
 
     def _collect_blocks_from_payload(self, payload: Any) -> List[Dict[str, Any]]:
-        """递归收集payload中的block节点"""
+        """Recursively collect block nodes in the payload"""
         collected: List[Dict[str, Any]] = []
         if isinstance(payload, dict):
             block_list = payload.get("blocks")
             block_type = payload.get("type")
             
-            # 排除内联类型，它们不是块级元素
+            # Exclude inline types, which are not block-level elements
             inline_types = {"inlineRun", "inline", "text"}
             if block_type in inline_types:
                 return collected
@@ -942,7 +906,7 @@ class HTMLRenderer:
         return collected
 
     def _coerce_block_dict(self, payload: Any) -> Dict[str, Any] | None:
-        """尝试将dict补充为合法block结构"""
+        """Try to supplement the dict into a legal block structure"""
         if not isinstance(payload, dict):
             return None
         block = copy.deepcopy(payload)
@@ -959,17 +923,15 @@ class HTMLRenderer:
         return block if block.get("type") else None
 
     def _format_toc_entry(self, entry: Dict[str, Any]) -> str:
-        """
-        将单个目录项转为带描述的HTML行。
+        """Convert a single directory entry into an HTML line with description.
 
-        参数:
-            entry: 目录条目，需包含 `text` 与 `anchor`。
+        Parameters:
+            entry: Directory entry, must contain `text` and `anchor`.
 
-        返回:
-            str: `<li>` 形式的HTML。
-        """
+        Return:
+            str: HTML in the form of `<li>`."""
         desc = entry.get("description")
-        # 清理描述文本中的JSON片段
+        # Clean JSON fragments in description text
         if desc:
             desc = self._clean_text_from_json_artifacts(desc)
         desc_html = f'<p class="toc-desc">{self._escape_html(desc)}</p>' if desc else ""
@@ -978,15 +940,13 @@ class HTMLRenderer:
         return f'<li class="level-{css_level}"><a href="#{self._escape_attr(entry["anchor"])}">{self._escape_html(entry["text"])}</a>{desc_html}</li>'
 
     def _compute_heading_labels(self, chapters: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        """
-        预计算各级标题的编号（章：一、二；节：1.1；小节：1.1.1）。
+        """Precalculate the numbers of headings at each level (Chapter: 1, 2; Section: 1.1; Subsection: 1.1.1).
 
-        参数:
-            chapters: Document IR中的章节数组。
+        Parameters:
+            chapters: Array of chapters in Document IR.
 
-        返回:
-            dict: 锚点到编号/描述的映射，方便TOC与正文引用。
-        """
+        Return:
+            dict: Mapping of anchor points to numbers/descriptions to facilitate TOC and text references."""
         label_map: Dict[str, Dict[str, Any]] = {}
 
         for chap_idx, chapter in enumerate(chapters or [], start=1):
@@ -1046,7 +1006,7 @@ class HTMLRenderer:
 
     @staticmethod
     def _strip_order_prefix(text: str) -> str:
-        """移除形如“1.0 ”或“一、”的前缀，得到纯标题"""
+        """Remove prefixes like "1.0" or "一," to get the pure title"""
         if not text:
             return ""
         separators = [" ", "、", ".", "．"]
@@ -1059,32 +1019,30 @@ class HTMLRenderer:
 
     @staticmethod
     def _to_chinese_numeral(number: int) -> str:
-        """将1/2/3映射为中文序号（十内）"""
-        numerals = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
+        """Map 1/2/3 to Chinese serial numbers (within ten)"""
+        numerals = ["zero", "one", "two", "three", "Four", "five", "six", "seven", "eight", "Nine", "ten"]
         if number <= 10:
             return numerals[number]
         tens, ones = divmod(number, 10)
         if number < 20:
-            return "十" + (numerals[ones] if ones else "")
+            return "ten" + (numerals[ones] if ones else "")
         words = ""
         if tens > 0:
-            words += numerals[tens] + "十"
+            words += numerals[tens] + "ten"
         if ones:
             words += numerals[ones]
         return words
 
-    # ====== 章节与块级渲染 ======
+    # ====== Chapter and block-level rendering ======
 
     def _render_chapter(self, chapter: Dict[str, Any]) -> str:
-        """
-        将章节blocks包裹进<section>，便于CSS控制。
+        """Wrap section blocks into <section> for easy CSS control.
 
-        参数:
-            chapter: 单个章节JSON。
+        Parameters:
+            chapter: single chapter JSON.
 
-        返回:
-            str: section包裹的HTML。
-        """
+        Return:
+            str: HTML wrapped by section."""
         section_id = self._escape_attr(chapter.get("anchor") or f"chapter-{chapter.get('chapterId', 'x')}")
         prev_chapter = self._current_chapter
         self._current_chapter = chapter
@@ -1095,27 +1053,23 @@ class HTMLRenderer:
         return f'<section id="{section_id}" class="chapter">\n{blocks_html}\n</section>'
 
     def _render_blocks(self, blocks: List[Dict[str, Any]]) -> str:
-        """
-        顺序渲染章节内所有block。
+        """Render all blocks in the chapter sequentially.
 
-        参数:
-            blocks: 章节内部的block数组。
+        Parameters:
+            blocks: block array inside the chapter.
 
-        返回:
-            str: 拼接后的HTML。
-        """
+        Return:
+            str: concatenated HTML."""
         return "".join(self._render_block(block) for block in blocks or [])
 
     def _render_block(self, block: Dict[str, Any]) -> str:
-        """
-        根据block.type分派到不同的渲染函数。
+        """Dispatched to different rendering functions based on block.type.
 
-        参数:
-            block: 单个block对象。
+        Parameters:
+            block: a single block object.
 
-        返回:
-            str: 渲染后的HTML，未知类型会输出JSON调试信息。
-        """
+        Return:
+            str: Rendered HTML, unknown types will output JSON debugging information."""
         block_type = block.get("type")
         handlers = {
             "heading": self._render_heading,
@@ -1139,11 +1093,11 @@ class HTMLRenderer:
         if handler:
             html_fragment = handler(block)
             return self._wrap_error_block(html_fragment, block)
-        # 兼容旧格式：缺少type但包含inlines时按paragraph处理
+        # Compatible with old formats: when type is missing but contains inlines, it is processed as paragraph
         if isinstance(block, dict) and block.get("inlines"):
             html_fragment = self._render_paragraph({"inlines": block.get("inlines")})
             return self._wrap_error_block(html_fragment, block)
-        # 兼容直接传入字符串的场景
+        # Compatible with scenarios where strings are directly passed in
         if isinstance(block, str):
             html_fragment = self._render_paragraph({"inlines": [{"text": block}]})
             return self._wrap_error_block(html_fragment, {"meta": {}, "type": "paragraph"})
@@ -1154,7 +1108,7 @@ class HTMLRenderer:
         return self._wrap_error_block(fallback, block)
 
     def _wrap_error_block(self, html_fragment: str, block: Dict[str, Any]) -> str:
-        """若block标记了error元数据，则包裹提示容器并注入tooltip。"""
+        """If the block is marked with error metadata, the prompt container is wrapped and the tooltip is injected."""
         if not html_fragment:
             return html_fragment
         meta = block.get("meta") or {}
@@ -1162,7 +1116,7 @@ class HTMLRenderer:
         if not isinstance(log_ref, dict):
             return html_fragment
         raw_preview = (meta.get("rawJsonPreview") or "")[:1200]
-        error_message = meta.get("errorMessage") or "LLM返回块解析错误"
+        error_message = meta.get("errorMessage") or "LLM returns block parsing error"
         importance = meta.get("importance") or "standard"
         ref_label = ""
         if log_ref.get("relativeFile") and log_ref.get("entryId"):
@@ -1177,7 +1131,7 @@ class HTMLRenderer:
         )
 
     def _render_heading(self, block: Dict[str, Any]) -> str:
-        """渲染heading block，确保锚点存在"""
+        """Render the heading block, ensuring the anchor point exists"""
         original_level = max(1, min(6, block.get("level", 2)))
         if original_level <= 2:
             level = 2
@@ -1199,14 +1153,14 @@ class HTMLRenderer:
         return f'<h{level} id="{anchor_attr}">{self._escape_html(display_text)}{subtitle_html}</h{level}>'
 
     def _render_paragraph(self, block: Dict[str, Any]) -> str:
-        """渲染段落，内部通过inline run保持混排样式"""
+        """Render paragraphs and maintain the shuffled style internally through inline run"""
         inlines_data = block.get("inlines", [])
         
-        # 检测并跳过包含文档元数据 JSON 的段落
+        # Detect and skip paragraphs containing document metadata JSON
         if self._is_metadata_paragraph(inlines_data):
             return ""
         
-        # 仅包含单个display公式时直接渲染为块，避免<p>内嵌<div>
+        # When only containing a single display formula, render it directly as a block to avoid <p> inline <div>
         if len(inlines_data) == 1:
             standalone = self._render_standalone_math_inline(inlines_data[0])
             if standalone:
@@ -1216,12 +1170,10 @@ class HTMLRenderer:
         return f"<p>{inlines}</p>"
 
     def _is_metadata_paragraph(self, inlines: List[Any]) -> bool:
-        """
-        检测段落是否只包含文档元数据 JSON。
+        """Detects whether a paragraph contains only document metadata JSON.
         
-        某些 LLM 生成的内容会将元数据（如 xrefs、widgets、footnotes、metadata）
-        错误地作为段落内容输出，本方法识别并标记这种情况以便跳过渲染。
-        """
+        Some LLM-generated content will contain metadata (such as xrefs, widgets, footnotes, metadata)
+        Incorrectly output as paragraph content, this method identifies and flags this case so that rendering can be skipped."""
         if not inlines or len(inlines) != 1:
             return False
         first = inlines[0]
@@ -1233,12 +1185,12 @@ class HTMLRenderer:
         text = text.strip()
         if not text.startswith("{") or not text.endswith("}"):
             return False
-        # 检测典型的元数据键
+        # Detect typical metadata keys
         metadata_indicators = ['"xrefs"', '"widgets"', '"footnotes"', '"metadata"', '"sectionBudgets"']
         return any(indicator in text for indicator in metadata_indicators)
 
     def _render_standalone_math_inline(self, run: Dict[str, Any] | str) -> str | None:
-        """当段落只包含单个display公式时，转为math-block避免破坏行内布局"""
+        """When a paragraph only contains a single display formula, convert it to math-block to avoid destroying the inline layout."""
         if isinstance(run, dict):
             text_value, marks = self._normalize_inline_payload(run)
             if marks:
@@ -1259,7 +1211,7 @@ class HTMLRenderer:
         return None
 
     def _render_list(self, block: Dict[str, Any]) -> str:
-        """渲染有序/无序/任务列表"""
+        """Rendering ordered/unordered/task lists"""
         list_type = block.get("listType", "bullet")
         tag = "ol" if list_type == "ordered" else "ul"
         extra_class = "task-list" if list_type == "task" else ""
@@ -1273,39 +1225,37 @@ class HTMLRenderer:
         return f'<{tag}{class_attr}>{items_html}</{tag}>'
 
     def _flatten_nested_cells(self, cells: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        展平错误嵌套的单元格结构。
+        """Flatten incorrectly nested cell structures.
 
-        某些 LLM 生成的表格数据中，单元格被错误地递归嵌套：
-        cells[0] 正常, cells[1].cells[0] 正常, cells[1].cells[1].cells[0] 正常...
-        本方法将这种嵌套结构展平为标准的平行单元格数组。
+        In some LLM-generated tabular data, cells were incorrectly nested recursively:
+        cells[0] is normal, cells[1].cells[0] is normal, cells[1].cells[1].cells[0] is normal...
+        This method flattens this nested structure into a standard parallel cell array.
 
-        参数:
-            cells: 可能包含嵌套结构的单元格数组。
+        Parameters:
+            cells: A cell array that may contain nested structures.
 
-        返回:
-            List[Dict]: 展平后的单元格数组。
-        """
+        Return:
+            List[Dict]: Flattened cell array."""
         if not cells:
             return []
 
         flattened: List[Dict[str, Any]] = []
 
         def _extract_cells(cell_or_list: Any) -> None:
-            """递归提取所有单元格"""
+            """Extract all cells recursively"""
             if not isinstance(cell_or_list, dict):
                 return
 
-            # 如果当前对象有 blocks，说明它是一个有效的单元格
+            # If the current object has blocks, it means it is a valid cell
             if "blocks" in cell_or_list:
-                # 创建单元格副本，移除嵌套的 cells
+                # Create a copy of a cell, removing nested cells
                 clean_cell = {
                     k: v for k, v in cell_or_list.items()
                     if k != "cells"
                 }
                 flattened.append(clean_cell)
 
-            # 如果当前对象有嵌套的 cells，递归处理
+            # If the current object has nested cells, process it recursively
             nested_cells = cell_or_list.get("cells")
             if isinstance(nested_cells, list):
                 for nested_cell in nested_cells:
@@ -1317,26 +1267,24 @@ class HTMLRenderer:
         return flattened
 
     def _fix_nested_table_rows(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        修复嵌套错误的表格行结构。
+        """Fix incorrectly nested table row structure.
 
-        某些 LLM 生成的表格数据中，所有行的单元格都被嵌套在第一行中，
-        导致表格只有1行但包含所有数据。本方法检测并修复这种情况。
+        In some tabular data generated by LLM, the cells of all rows are nested in the first row.
+        Resulting in a table with only 1 row but containing all data. This method detects and fixes this situation.
 
-        参数:
-            rows: 原始的表格行数组。
+        Parameters:
+            rows: original table row array.
 
-        返回:
-            List[Dict]: 修复后的表格行数组。
-        """
+        Return:
+            List[Dict]: Repaired table row array."""
         if not rows or len(rows) != 1:
-            # 只处理只有1行的异常情况
+            # Only handle exceptions with only 1 row
             return rows
 
         first_row = rows[0]
         original_cells = first_row.get("cells", [])
 
-        # 检查是否存在嵌套结构
+        # Check if nested structure exists
         has_nested = any(
             isinstance(cell.get("cells"), list)
             for cell in original_cells
@@ -1346,16 +1294,16 @@ class HTMLRenderer:
         if not has_nested:
             return rows
 
-        # 展平所有单元格
+        # Flatten all cells
         all_cells = self._flatten_nested_cells(original_cells)
 
         if len(all_cells) <= 2:
-            # 单元格太少，不需要重组
+            # Too few cells, no need to reorganize
             return rows
 
-        # 辅助函数：获取单元格文本
+        # Helper function: get cell text
         def _get_cell_text(cell: Dict[str, Any]) -> str:
-            """获取单元格的文本内容"""
+            """Get the text content of a cell"""
             blocks = cell.get("blocks", [])
             for block in blocks:
                 if isinstance(block, dict) and block.get("type") == "paragraph":
@@ -1368,19 +1316,19 @@ class HTMLRenderer:
             return ""
 
         def _is_placeholder_cell(cell: Dict[str, Any]) -> bool:
-            """判断单元格是否是占位符（如 '--', '-', '—' 等）"""
+            """Determine whether the cell is a placeholder (such as '--', '-', '—', etc.)"""
             text = _get_cell_text(cell)
             return text in ("--", "-", "—", "——", "", "N/A", "n/a")
 
-        # 先过滤掉占位符单元格
+        # Filter out the placeholder cells first
         all_cells = [c for c in all_cells if not _is_placeholder_cell(c)]
 
         if len(all_cells) <= 2:
             return rows
 
-        # 检测表头列数：查找带有 bold 标记或典型表头词的单元格
+        # Detect header column numbers: Find cells with bold markers or typical header words
         def _is_header_cell(cell: Dict[str, Any]) -> bool:
-            """判断单元格是否像表头（有加粗标记或是典型表头词）"""
+            """Determine whether the cell looks like a header (has a bold mark or a typical header word)"""
             blocks = cell.get("blocks", [])
             for block in blocks:
                 if isinstance(block, dict) and block.get("type") == "paragraph":
@@ -1390,62 +1338,62 @@ class HTMLRenderer:
                             marks = inline.get("marks", [])
                             if any(isinstance(m, dict) and m.get("type") == "bold" for m in marks):
                                 return True
-            # 也检查典型的表头词
+            # Also check for typical header words
             text = _get_cell_text(cell)
             header_keywords = {
-                "时间", "日期", "名称", "类型", "状态", "数量", "金额", "比例", "指标",
-                "平台", "渠道", "来源", "描述", "说明", "备注", "序号", "编号",
-                "事件", "关键", "数据", "支撑", "反应", "市场", "情感", "节点",
-                "维度", "要点", "详情", "标签", "影响", "趋势", "权重", "类别",
-                "信息", "内容", "风格", "偏好", "主要", "用户", "核心", "特征",
-                "分类", "范围", "对象", "项目", "阶段", "周期", "频率", "等级",
+                "time", "date", "name", "type", "state", "quantity", "Amount", "Proportion", "index",
+                "platform", "channel", "source", "describe", "illustrate", "Remark", "serial number", "serial number",
+                "event", "key", "data", "support", "reaction", "market", "emotion", "node",
+                "Dimensions", "Main points", "Details", "Label", "Influence", "trend", "weight", "category",
+                "information", "content", "style", "Preference", "main", "user", "core", "feature",
+                "Classification", "scope", "object", "project", "stage", "cycle", "frequency", "grade",
             }
             return any(kw in text for kw in header_keywords) and len(text) <= 20
 
-        # 计算表头列数：统计连续的表头单元格数量
+        # Calculate the number of header columns: count the number of consecutive header cells
         header_count = 0
         for cell in all_cells:
             if _is_header_cell(cell):
                 header_count += 1
             else:
-                # 遇到第一个非表头单元格，说明数据区开始
+                # Encountering the first non-header cell indicates the beginning of the data area
                 break
 
-        # 如果没有检测到表头，尝试使用启发式方法
+        # If no header is detected, try using heuristics
         if header_count == 0:
-            # 假设列数为 4 或 5（常见的表格列数）
+            # Assume the number of columns is 4 or 5 (common table column numbers)
             total = len(all_cells)
             for possible_cols in [4, 5, 3, 6, 2]:
                 if total % possible_cols == 0:
                     header_count = possible_cols
                     break
             else:
-                # 尝试找到最接近的能整除的列数
+                # Try to find the closest number of columns that is divisible
                 for possible_cols in [4, 5, 3, 6, 2]:
                     remainder = total % possible_cols
-                    # 允许最多3个多余的单元格（可能是尾部的总结或注释）
+                    # Allow up to 3 extra cells (possibly summary or comments at the end)
                     if remainder <= 3:
                         header_count = possible_cols
                         break
                 else:
-                    # 无法确定列数，返回原始数据
+                    # Unable to determine number of columns, return original data
                     return rows
 
-        # 计算有效的单元格数量（可能需要截断尾部多余的单元格）
+        # Calculate the number of valid cells (you may need to truncate excess cells at the end)
         total = len(all_cells)
         remainder = total % header_count
         if remainder > 0 and remainder <= 3:
-            # 截断尾部多余的单元格（可能是总结或注释）
+            # Truncate excess cells at the end (maybe summary or comments)
             all_cells = all_cells[:total - remainder]
         elif remainder > 3:
-            # 余数太大，可能列数检测错误，返回原始数据
+            # The remainder is too large, the number of columns may be detected incorrectly, and the original data is returned.
             return rows
 
-        # 重新组织成多行
+        # Reorganize into multiple lines
         fixed_rows: List[Dict[str, Any]] = []
         for i in range(0, len(all_cells), header_count):
             row_cells = all_cells[i:i + header_count]
-            # 标记第一行为表头
+            # Mark the first row as header
             if i == 0:
                 for cell in row_cells:
                     cell["header"] = True
@@ -1454,23 +1402,21 @@ class HTMLRenderer:
         return fixed_rows
 
     def _render_table(self, block: Dict[str, Any]) -> str:
-        """
-        渲染表格，同时保留caption与单元格属性。
+        """Render the table while retaining the caption and cell attributes.
 
-        参数:
-            block: table类型的block。
+        Parameters:
+            block: block of table type.
 
-        返回:
-            str: 包含<table>结构的HTML。
-        """
-        # 先修复可能存在的嵌套行结构问题
+        Return:
+            str: HTML containing <table> structure."""
+        # First fix possible nested row structure issues
         raw_rows = block.get("rows") or []
         fixed_rows = self._fix_nested_table_rows(raw_rows)
         rows = self._normalize_table_rows(fixed_rows)
         rows_html = ""
         for row in rows:
             row_cells = ""
-            # 展平可能存在的嵌套单元格结构（作为额外保护）
+            # Flatten possible nested cell structures (as extra protection)
             cells = self._flatten_nested_cells(row.get("cells", []))
             for cell in cells:
                 cell_tag = "th" if cell.get("header") or cell.get("isHeader") else "td"
@@ -1490,26 +1436,24 @@ class HTMLRenderer:
         return f'<div class="table-wrap"><table>{caption_html}<tbody>{rows_html}</tbody></table></div>'
 
     def _render_swot_table(self, block: Dict[str, Any]) -> str:
-        """
-        渲染四象限的SWOT分析，同时生成两种布局：
-        1. 卡片布局（用于HTML网页显示）- 圆角矩形四象限
-        2. 表格布局（用于PDF导出）- 结构化表格，支持分页
+        """Render a four-quadrant SWOT analysis and generate two layouts at the same time:
+        1. Card layout (for HTML web page display) - four quadrants of rounded rectangle
+        2. Table layout (for PDF export) - structured table, supports paging
         
-        PDF分页策略：
-        - 使用表格形式，每个S/W/O/T象限为独立表格区块
-        - 允许在不同象限之间分页
-        - 每个象限内的条目尽量保持在一起
-        """
-        title = block.get("title") or "SWOT 分析"
+        PDF paging strategy:
+        - Use table format, each S/W/O/T quadrant is an independent table block
+        - Allow paging between different quadrants
+        - Keep items in each quadrant together as much as possible"""
+        title = block.get("title") or "SWOT analysis"
         summary = block.get("summary")
         
-        # ========== 卡片布局（HTML用）==========
+        # ========== Card layout (for HTML) ==========
         card_html = self._render_swot_card_layout(block, title, summary)
         
-        # ========== 表格布局（PDF用）==========
+        # ========== Table layout (for PDF) ==========
         table_html = self._render_swot_pdf_table_layout(block, title, summary)
         
-        # 返回包含两种布局的容器
+        # Returns a container containing two layouts
         return f"""
         <div class="swot-container">
           {card_html}
@@ -1518,17 +1462,17 @@ class HTMLRenderer:
         """
     
     def _render_swot_card_layout(self, block: Dict[str, Any], title: str, summary: str | None) -> str:
-        """渲染SWOT卡片布局（用于HTML网页显示）"""
+        """Render SWOT card layout (for HTML web page display)"""
         quadrants = [
-            ("strengths", "优势 Strengths", "S", "strength"),
-            ("weaknesses", "劣势 Weaknesses", "W", "weakness"),
-            ("opportunities", "机会 Opportunities", "O", "opportunity"),
-            ("threats", "威胁 Threats", "T", "threat"),
+            ("strengths", "Strengths", "S", "strength"),
+            ("weaknesses", "Weaknesses", "W", "weakness"),
+            ("opportunities", "Opportunities", "O", "opportunity"),
+            ("threats", "ThreatsThreats", "T", "threat"),
         ]
         cells_html = ""
         for idx, (key, label, code, css) in enumerate(quadrants):
             items = self._normalize_swot_items(block.get(key))
-            caption_text = f"{len(items)} 条要点" if items else "待补充"
+            caption_text = f"{len(items)} points" if items else "To be added"
             list_html = "".join(self._render_swot_item(item) for item in items) if items else '<li class="swot-empty">尚未填入要点</li>'
             first_cell_class = " swot-cell--first" if idx == 0 else ""
             cells_html += f"""
@@ -1546,12 +1490,11 @@ class HTMLRenderer:
         title_html = f'<div class="swot-card__title">{self._escape_html(title)}</div>' if title else ""
         legend = """
             <div class="swot-legend">
-              <span class="swot-legend__item strength">S 优势</span>
-              <span class="swot-legend__item weakness">W 劣势</span>
-              <span class="swot-legend__item opportunity">O 机会</span>
-              <span class="swot-legend__item threat">T 威胁</span>
-            </div>
-        """
+              <span class="swot-legend__item strength">S Advantages</span>
+              <span class="swot-legend__item weakness">W Disadvantages</span>
+              <span class="swot-legend__item opportunity">O opportunities</span>
+              <span class="swot-legend__item threat">T threats</span>
+            </div>"""
         return f"""
         <div class="swot-card swot-card--html">
           <div class="swot-card__head">
@@ -1563,23 +1506,21 @@ class HTMLRenderer:
         """
     
     def _render_swot_pdf_table_layout(self, block: Dict[str, Any], title: str, summary: str | None) -> str:
-        """
-        渲染SWOT表格布局（用于PDF导出）
+        """Render SWOT table layout (for PDF export)
         
-        设计说明：
-        - 整体为一个大表格，包含标题行和4个象限区域
-        - 每个象限区域有自己的子标题行和内容行
-        - 使用合并单元格来显示象限标题
-        - 通过CSS控制分页行为
-        """
+        Design description:
+        - The whole is a large table, including the title row and 4 quadrant areas
+        - Each quadrant area has its own subtitle row and content row
+        - Use merged cells to display quadrant titles
+        - Control paging behavior through CSS"""
         quadrants = [
-            ("strengths", "S", "优势 Strengths", "swot-pdf-strength", "#1c7f6e"),
-            ("weaknesses", "W", "劣势 Weaknesses", "swot-pdf-weakness", "#c0392b"),
-            ("opportunities", "O", "机会 Opportunities", "swot-pdf-opportunity", "#1f5ab3"),
-            ("threats", "T", "威胁 Threats", "swot-pdf-threat", "#b36b16"),
+            ("strengths", "S", "Strengths", "swot-pdf-strength", "#1c7f6e"),
+            ("weaknesses", "W", "Weaknesses", "swot-pdf-weakness", "#c0392b"),
+            ("opportunities", "O", "Opportunities", "swot-pdf-opportunity", "#1f5ab3"),
+            ("threats", "T", "ThreatsThreats", "swot-pdf-threat", "#b36b16"),
         ]
         
-        # 标题和摘要
+        # Title and abstract
         summary_row = ""
         if summary:
             summary_row = f"""
@@ -1587,38 +1528,38 @@ class HTMLRenderer:
               <td colspan="4" class="swot-pdf-summary">{self._escape_html(summary)}</td>
             </tr>"""
         
-        # 生成四个象限的表格内容
+        # Generate table content for four quadrants
         quadrant_tables = ""
         for idx, (key, code, label, css_class, color) in enumerate(quadrants):
             items = self._normalize_swot_items(block.get(key))
             
-            # 生成每个象限的内容行
+            # Generate content rows for each quadrant
             items_rows = ""
             if items:
                 for item_idx, item in enumerate(items):
-                    item_title = item.get("title") or item.get("label") or item.get("text") or "未命名要点"
+                    item_title = item.get("title") or item.get("label") or item.get("text") or "unnamed points"
                     item_detail = item.get("detail") or item.get("description") or ""
                     item_evidence = item.get("evidence") or item.get("source") or ""
                     item_impact = item.get("impact") or item.get("priority") or ""
-                    # item_score = item.get("score")  # 评分功能已禁用
+                    # item_score = item.get("score") # The scoring function is disabled
                     
-                    # 构建详情内容
+                    # Build details
                     detail_parts = []
                     if item_detail:
                         detail_parts.append(item_detail)
                     if item_evidence:
-                        detail_parts.append(f"佐证：{item_evidence}")
+                        detail_parts.append(f"Evidence: {item_evidence}")
                     detail_text = "<br/>".join(detail_parts) if detail_parts else "-"
                     
-                    # 构建标签
+                    # Build tags
                     tags = []
                     if item_impact:
                         tags.append(f'<span class="swot-pdf-tag">{self._escape_html(item_impact)}</span>')
-                    # if item_score not in (None, ""):  # 评分功能已禁用
-                    #     tags.append(f'<span class="swot-pdf-tag swot-pdf-tag--score">评分 {self._escape_html(item_score)}</span>')
+                    # if item_score not in (None, ""): # The scoring function is disabled
+                    # tags.append(f'<span class="swot-pdf-tag swot-pdf-tag--score">score {self._escape_html(item_score)}</span>')
                     tags_html = " ".join(tags)
                     
-                    # 第一行需要合并象限标题单元格
+                    # The first row needs to merge the quadrant header cells
                     if item_idx == 0:
                         rowspan = len(items)
                         items_rows += f"""
@@ -1641,7 +1582,7 @@ class HTMLRenderer:
               <td class="swot-pdf-item-tags">{tags_html}</td>
             </tr>"""
             else:
-                # 没有内容时显示占位
+                # Show placeholder when there is no content
                 items_rows = f"""
             <tr class="swot-pdf-item-row {css_class}">
               <td class="swot-pdf-quadrant-label {css_class}">
@@ -1649,10 +1590,10 @@ class HTMLRenderer:
                 <span class="swot-pdf-label-text">{self._escape_html(label.split()[0])}</span>
               </td>
               <td class="swot-pdf-item-num">-</td>
-              <td colspan="3" class="swot-pdf-empty">暂无要点</td>
+              <td colspan="3" class="swot-pdf-empty">No points yet</td>
             </tr>"""
             
-            # 每个象限作为一个独立的tbody，便于分页控制
+            # Each quadrant acts as an independent tbody for easy paging control.
             quadrant_tables += f"""
           <tbody class="swot-pdf-quadrant {css_class}">
             {items_rows}
@@ -1664,21 +1605,20 @@ class HTMLRenderer:
             <caption class="swot-pdf-caption">{self._escape_html(title)}</caption>
             <thead class="swot-pdf-thead">
               <tr>
-                <th class="swot-pdf-th-quadrant">象限</th>
-                <th class="swot-pdf-th-num">序号</th>
-                <th class="swot-pdf-th-title">要点</th>
-                <th class="swot-pdf-th-detail">详细说明</th>
-                <th class="swot-pdf-th-tags">影响</th>
+                <th class="swot-pdf-th-quadrant">Quadrant</th>
+                <th class="swot-pdf-th-num">Serial number</th>
+                <th class="swot-pdf-th-title">Points</th>
+                <th class="swot-pdf-th-detail">Detailed description</th>
+                <th class="swot-pdf-th-tags">Impact</th>
               </tr>
               {summary_row}
             </thead>
             {quadrant_tables}
           </table>
-        </div>
-        """
+        </div>"""
 
     def _normalize_swot_items(self, raw: Any) -> List[Dict[str, Any]]:
-        """将SWOT条目规整为统一结构，兼容字符串/对象两种写法"""
+        """Organize SWOT entries into a unified structure, compatible with both string/object writing methods"""
         normalized: List[Dict[str, Any]] = []
         if raw is None:
             return normalized
@@ -1701,7 +1641,7 @@ class HTMLRenderer:
             detail = entry.get("detail") or entry.get("description")
             evidence = entry.get("evidence") or entry.get("source")
             impact = entry.get("impact") or entry.get("priority")
-            # score = entry.get("score")  # 评分功能已禁用
+            # score = entry.get("score") # The scoring function is disabled
             if not title and isinstance(detail, str):
                 title = detail
                 detail = None
@@ -1713,23 +1653,23 @@ class HTMLRenderer:
                     "detail": detail,
                     "evidence": evidence,
                     "impact": impact,
-                    # "score": score,  # 评分功能已禁用
+                    # "score": score, # The scoring function is disabled
                 }
             )
         return normalized
 
     def _render_swot_item(self, item: Dict[str, Any]) -> str:
-        """输出单个SWOT条目的HTML片段"""
-        title = item.get("title") or item.get("label") or item.get("text") or "未命名要点"
+        """Output HTML snippet of a single SWOT entry"""
+        title = item.get("title") or item.get("label") or item.get("text") or "unnamed points"
         detail = item.get("detail") or item.get("description")
         evidence = item.get("evidence") or item.get("source")
         impact = item.get("impact") or item.get("priority")
-        # score = item.get("score")  # 评分功能已禁用
+        # score = item.get("score") # The scoring function is disabled
         tags: List[str] = []
         if impact:
             tags.append(f'<span class="swot-tag">{self._escape_html(impact)}</span>')
-        # if score not in (None, ""):  # 评分功能已禁用
-        #     tags.append(f'<span class="swot-tag neutral">评分 {self._escape_html(score)}</span>')
+        # if score not in (None, ""): # The scoring function is disabled
+        # tags.append(f'<span class="swot-tag neutral">score {self._escape_html(score)}</span>')
         tags_html = f'<span class="swot-item-tags">{"".join(tags)}</span>' if tags else ""
         detail_html = f'<div class="swot-item-desc">{self._escape_html(detail)}</div>' if detail else ""
         evidence_html = f'<div class="swot-item-evidence">佐证：{self._escape_html(evidence)}</div>' if evidence else ""
@@ -1740,30 +1680,28 @@ class HTMLRenderer:
             </li>
         """
 
-    # ==================== PEST 分析块 ====================
+    # ==================== PEST Analysis Block ====================
     
     def _render_pest_table(self, block: Dict[str, Any]) -> str:
-        """
-        渲染四维度的PEST分析，同时生成两种布局：
-        1. 卡片布局（用于HTML网页显示）- 横向条状堆叠
-        2. 表格布局（用于PDF导出）- 结构化表格，支持分页
+        """Render a four-dimensional PEST analysis and generate two layouts at the same time:
+        1. Card layout (for HTML web page display) - horizontal strip stacking
+        2. Table layout (for PDF export) - structured table, supports paging
         
-        PEST分析维度：
-        - P: Political（政治因素）
-        - E: Economic（经济因素）
-        - S: Social（社会因素）
-        - T: Technological（技术因素）
-        """
-        title = block.get("title") or "PEST 分析"
+        PEST analysis dimensions:
+        - P: Political (political factors)
+        - E: Economic (economic factors)
+        - S: Social (social factors)
+        - T: Technological (technical factors)"""
+        title = block.get("title") or "PEST analysis"
         summary = block.get("summary")
         
-        # ========== 卡片布局（HTML用）==========
+        # ========== Card layout (for HTML) ==========
         card_html = self._render_pest_card_layout(block, title, summary)
         
-        # ========== 表格布局（PDF用）==========
+        # ========== Table layout (for PDF) ==========
         table_html = self._render_pest_pdf_table_layout(block, title, summary)
         
-        # 返回包含两种布局的容器
+        # Returns a container containing two layouts
         return f"""
         <div class="pest-container">
           {card_html}
@@ -1772,17 +1710,17 @@ class HTMLRenderer:
         """
     
     def _render_pest_card_layout(self, block: Dict[str, Any], title: str, summary: str | None) -> str:
-        """渲染PEST卡片布局（用于HTML网页显示）- 横向条状堆叠设计"""
+        """Rendering PEST card layout (for HTML web page display) - horizontal strip stack design"""
         dimensions = [
-            ("political", "政治因素 Political", "P", "political"),
-            ("economic", "经济因素 Economic", "E", "economic"),
-            ("social", "社会因素 Social", "S", "social"),
-            ("technological", "技术因素 Technological", "T", "technological"),
+            ("political", "political factors political", "P", "political"),
+            ("economic", "Economic factors Economic", "E", "economic"),
+            ("social", "Social factors Social", "S", "social"),
+            ("technological", "Technical factors Technological", "T", "technological"),
         ]
         strips_html = ""
         for idx, (key, label, code, css) in enumerate(dimensions):
             items = self._normalize_pest_items(block.get(key))
-            caption_text = f"{len(items)} 条要点" if items else "待补充"
+            caption_text = f"{len(items)} points" if items else "To be added"
             list_html = "".join(self._render_pest_item(item) for item in items) if items else '<li class="pest-empty">尚未填入要点</li>'
             first_strip_class = " pest-strip--first" if idx == 0 else ""
             strips_html += f"""
@@ -1802,12 +1740,11 @@ class HTMLRenderer:
         title_html = f'<div class="pest-card__title">{self._escape_html(title)}</div>' if title else ""
         legend = """
             <div class="pest-legend">
-              <span class="pest-legend__item political">P 政治</span>
-              <span class="pest-legend__item economic">E 经济</span>
-              <span class="pest-legend__item social">S 社会</span>
-              <span class="pest-legend__item technological">T 技术</span>
-            </div>
-        """
+              <span class="pest-legend__item political">P Politics</span>
+              <span class="pest-legend__item economic">E Economy</span>
+              <span class="pest-legend__item social">S Society</span>
+              <span class="pest-legend__item technological">T Technology</span>
+            </div>"""
         return f"""
         <div class="pest-card pest-card--html">
           <div class="pest-card__head">
@@ -1819,23 +1756,21 @@ class HTMLRenderer:
         """
     
     def _render_pest_pdf_table_layout(self, block: Dict[str, Any], title: str, summary: str | None) -> str:
-        """
-        渲染PEST表格布局（用于PDF导出）
+        """Render PEST table layout (for PDF export)
         
-        设计说明：
-        - 整体为一个大表格，包含标题行和4个维度区域
-        - 每个维度有自己的子标题行和内容行
-        - 使用合并单元格来显示维度标题
-        - 通过CSS控制分页行为
-        """
+        Design description:
+        - The whole is a large table, including the title row and 4 dimension areas
+        - Each dimension has its own subtitle row and content row
+        - Use merged cells to display dimension titles
+        - Control paging behavior through CSS"""
         dimensions = [
-            ("political", "P", "政治因素 Political", "pest-pdf-political", "#8e44ad"),
-            ("economic", "E", "经济因素 Economic", "pest-pdf-economic", "#16a085"),
-            ("social", "S", "社会因素 Social", "pest-pdf-social", "#e84393"),
-            ("technological", "T", "技术因素 Technological", "pest-pdf-technological", "#2980b9"),
+            ("political", "P", "political factors political", "pest-pdf-political", "#8e44ad"),
+            ("economic", "E", "Economic factors Economic", "pest-pdf-economic", "#16a085"),
+            ("social", "S", "Social factors Social", "pest-pdf-social", "#e84393"),
+            ("technological", "T", "Technical factors Technological", "pest-pdf-technological", "#2980b9"),
         ]
         
-        # 标题和摘要
+        # Title and abstract
         summary_row = ""
         if summary:
             summary_row = f"""
@@ -1843,35 +1778,35 @@ class HTMLRenderer:
               <td colspan="4" class="pest-pdf-summary">{self._escape_html(summary)}</td>
             </tr>"""
         
-        # 生成四个维度的表格内容
+        # Generate table content in four dimensions
         dimension_tables = ""
         for idx, (key, code, label, css_class, color) in enumerate(dimensions):
             items = self._normalize_pest_items(block.get(key))
             
-            # 生成每个维度的内容行
+            # Generate content rows for each dimension
             items_rows = ""
             if items:
                 for item_idx, item in enumerate(items):
-                    item_title = item.get("title") or item.get("label") or item.get("text") or "未命名要点"
+                    item_title = item.get("title") or item.get("label") or item.get("text") or "unnamed points"
                     item_detail = item.get("detail") or item.get("description") or ""
                     item_source = item.get("source") or item.get("evidence") or ""
                     item_trend = item.get("trend") or item.get("impact") or ""
                     
-                    # 构建详情内容
+                    # Build details
                     detail_parts = []
                     if item_detail:
                         detail_parts.append(item_detail)
                     if item_source:
-                        detail_parts.append(f"来源：{item_source}")
+                        detail_parts.append(f"Source: {item_source}")
                     detail_text = "<br/>".join(detail_parts) if detail_parts else "-"
                     
-                    # 构建标签
+                    # Build tags
                     tags = []
                     if item_trend:
                         tags.append(f'<span class="pest-pdf-tag">{self._escape_html(item_trend)}</span>')
                     tags_html = " ".join(tags)
                     
-                    # 第一行需要合并维度标题单元格
+                    # The first row needs to merge the dimension header cells
                     if item_idx == 0:
                         rowspan = len(items)
                         items_rows += f"""
@@ -1894,7 +1829,7 @@ class HTMLRenderer:
               <td class="pest-pdf-item-tags">{tags_html}</td>
             </tr>"""
             else:
-                # 没有内容时显示占位
+                # Show placeholder when there is no content
                 items_rows = f"""
             <tr class="pest-pdf-item-row {css_class}">
               <td class="pest-pdf-dimension-label {css_class}">
@@ -1902,10 +1837,10 @@ class HTMLRenderer:
                 <span class="pest-pdf-label-text">{self._escape_html(label.split()[0])}</span>
               </td>
               <td class="pest-pdf-item-num">-</td>
-              <td colspan="3" class="pest-pdf-empty">暂无要点</td>
+              <td colspan="3" class="pest-pdf-empty">No points yet</td>
             </tr>"""
             
-            # 每个维度作为一个独立的tbody，便于分页控制
+            # Each dimension serves as an independent tbody for easy paging control.
             dimension_tables += f"""
           <tbody class="pest-pdf-dimension {css_class}">
             {items_rows}
@@ -1917,21 +1852,20 @@ class HTMLRenderer:
             <caption class="pest-pdf-caption">{self._escape_html(title)}</caption>
             <thead class="pest-pdf-thead">
               <tr>
-                <th class="pest-pdf-th-dimension">维度</th>
-                <th class="pest-pdf-th-num">序号</th>
-                <th class="pest-pdf-th-title">要点</th>
-                <th class="pest-pdf-th-detail">详细说明</th>
-                <th class="pest-pdf-th-tags">趋势/影响</th>
+                <th class="pest-pdf-th-dimension">Dimensions</th>
+                <th class="pest-pdf-th-num">Serial number</th>
+                <th class="pest-pdf-th-title">Points</th>
+                <th class="pest-pdf-th-detail">Detailed description</th>
+                <th class="pest-pdf-th-tags">Trend/Impact</th>
               </tr>
               {summary_row}
             </thead>
             {dimension_tables}
           </table>
-        </div>
-        """
+        </div>"""
 
     def _normalize_pest_items(self, raw: Any) -> List[Dict[str, Any]]:
-        """将PEST条目规整为统一结构，兼容字符串/对象两种写法"""
+        """Organize PEST entries into a unified structure, compatible with both string/object writing methods"""
         normalized: List[Dict[str, Any]] = []
         if raw is None:
             return normalized
@@ -1970,8 +1904,8 @@ class HTMLRenderer:
         return normalized
 
     def _render_pest_item(self, item: Dict[str, Any]) -> str:
-        """输出单个PEST条目的HTML片段"""
-        title = item.get("title") or item.get("label") or item.get("text") or "未命名要点"
+        """Output HTML snippet of a single PEST entry"""
+        title = item.get("title") or item.get("label") or item.get("text") or "unnamed points"
         detail = item.get("detail") or item.get("description")
         source = item.get("source") or item.get("evidence")
         trend = item.get("trend") or item.get("impact")
@@ -1989,15 +1923,13 @@ class HTMLRenderer:
         """
 
     def _normalize_table_rows(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        检测并修正仅有单列的竖排表，转换为标准网格。
+        """Detect and correct vertical tables with only one column, converting them to standard grids.
 
-        参数:
-            rows: 原始表格行。
+        Parameters:
+            rows: original table rows.
 
-        返回:
-            list[dict]: 若检测到竖排表则返回转置后的行，否则原样返回。
-        """
+        Return:
+            list[dict]: If a vertical table is detected, the transposed row is returned, otherwise it is returned unchanged."""
         if not rows:
             return []
         if not all(len((row.get("cells") or [])) == 1 for row in rows):
@@ -2010,7 +1942,7 @@ class HTMLRenderer:
         return normalized or rows
 
     def _detect_transposed_header_span(self, rows: List[Dict[str, Any]], texts: List[str]) -> int:
-        """推断竖排表头的行数，用于后续转置"""
+        """Infer the number of rows in the vertical table header for subsequent transposition"""
         max_fields = min(8, len(rows) // 2)
         header_span = 0
         for idx, text in enumerate(texts):
@@ -2030,7 +1962,7 @@ class HTMLRenderer:
         return header_span
 
     def _is_potential_table_header(self, text: str) -> bool:
-        """根据长度与字符特征判断是否像表头字段"""
+        """Determine whether it looks like a header field based on length and character characteristics"""
         if not text:
             return False
         stripped = text.strip()
@@ -2039,7 +1971,7 @@ class HTMLRenderer:
         return not any(ch.isdigit() or ch in self.TABLE_COMPLEX_CHARS for ch in stripped)
 
     def _looks_like_table_value(self, text: str) -> bool:
-        """判断该文本是否更像数据值，用于辅助判断转置"""
+        """Determine whether the text is more like a data value, used to assist in determining transposition"""
         if not text:
             return False
         stripped = text.strip()
@@ -2048,7 +1980,7 @@ class HTMLRenderer:
         return any(ch.isdigit() or ch in self.TABLE_COMPLEX_CHARS for ch in stripped)
 
     def _transpose_single_cell_table(self, rows: List[Dict[str, Any]], span: int) -> List[Dict[str, Any]]:
-        """将单列多行的表格转换为标准表头 + 若干数据行"""
+        """Convert a table with a single column and multiple rows into a standard header + several data rows"""
         total = len(rows)
         if total <= span or (total - span) % span != 0:
             return []
@@ -2076,7 +2008,7 @@ class HTMLRenderer:
         return normalized
 
     def _extract_row_text(self, row: Dict[str, Any]) -> str:
-        """提取表格行中的纯文本，方便启发式分析"""
+        """Extract plain text from table rows to facilitate heuristic analysis"""
         cells = row.get("cells") or []
         if not cells:
             return ""
@@ -2096,12 +2028,12 @@ class HTMLRenderer:
         return "".join(texts)
 
     def _render_blockquote(self, block: Dict[str, Any]) -> str:
-        """渲染引用块，可嵌套其他block"""
+        """Render reference blocks, which can nest other blocks"""
         inner = self._render_blocks(block.get("blocks", []))
         return f"<blockquote>{inner}</blockquote>"
 
     def _render_engine_quote(self, block: Dict[str, Any]) -> str:
-        """渲染单Engine发言块，带独立配色与标题"""
+        """Render a single Engine speech block with independent color matching and title"""
         engine_raw = (block.get("engine") or "").lower()
         engine = engine_raw if engine_raw in ENGINE_AGENT_TITLES else "insight"
         expected_title = ENGINE_AGENT_TITLES.get(engine, ENGINE_AGENT_TITLES["insight"])
@@ -2119,13 +2051,13 @@ class HTMLRenderer:
         )
 
     def _render_code(self, block: Dict[str, Any]) -> str:
-        """渲染代码块，附带语言信息"""
+        """Render code blocks with language information"""
         lang = block.get("lang") or ""
         content = self._escape_html(block.get("content", ""))
         return f'<pre class="code-block" data-lang="{self._escape_attr(lang)}"><code>{content}</code></pre>'
 
     def _render_math(self, block: Dict[str, Any]) -> str:
-        """渲染数学公式，占位符交给外部MathJax或后处理"""
+        """Render mathematical formulas, and pass placeholders to external MathJax or post-processing"""
         latex_raw = block.get("latex", "")
         latex = self._escape_html(self._normalize_latex_string(latex_raw))
         math_id = self._escape_attr(block.get("mathId", "")) if block.get("mathId") else ""
@@ -2133,20 +2065,18 @@ class HTMLRenderer:
         return f'<div class="math-block"{id_attr}>$$ {latex} $$</div>'
 
     def _render_figure(self, block: Dict[str, Any]) -> str:
-        """根据新规范默认不渲染外部图片，改为友好提示"""
-        caption = block.get("caption") or "图像内容已省略（仅允许HTML原生图表与表格）"
+        """According to the new specification, external images are not rendered by default and are changed to friendly prompts."""
+        caption = block.get("caption") or "Image content omitted (only HTML native charts and tables allowed)"
         return f'<div class="figure-placeholder">{self._escape_html(caption)}</div>'
 
     def _render_callout(self, block: Dict[str, Any]) -> str:
-        """
-        渲染高亮提示盒，tone决定颜色。
+        """Render a highlight prompt box, and tone determines the color.
 
-        参数:
-            block: callout类型的block。
+        Parameters:
+            block: block of callout type.
 
-        返回:
-            str: callout HTML，若内部包含不允许的块会被拆分。
-        """
+        Return:
+            str: callout HTML, if it contains disallowed blocks, it will be split."""
         tone = block.get("tone", "info")
         title = block.get("title")
         safe_blocks, trailing_blocks = self._split_callout_content(block.get("blocks"))
@@ -2159,7 +2089,7 @@ class HTMLRenderer:
     def _split_callout_content(
         self, blocks: List[Dict[str, Any]] | None
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """限定callout内部仅包含轻量内容，其余块剥离到外层"""
+        """Limit the callout to contain only lightweight content, and strip the remaining blocks to the outer layer"""
         if not blocks:
             return [], []
         safe: List[Dict[str, Any]] = []
@@ -2186,7 +2116,7 @@ class HTMLRenderer:
     def _sanitize_callout_list(
         self, block: Dict[str, Any]
     ) -> tuple[Dict[str, Any] | None, List[Dict[str, Any]]]:
-        """当列表项包含结构型block时，将其截断移出callout"""
+        """When the list item contains a structural block, truncate it and move it out of the callout"""
         items = block.get("items") or []
         if not items:
             return block, []
@@ -2208,7 +2138,7 @@ class HTMLRenderer:
         return new_block, trailing
 
     def _render_kpi_grid(self, block: Dict[str, Any]) -> str:
-        """渲染KPI卡片栅格，包含指标值与涨跌幅"""
+        """Render KPI card raster, including indicator values ​​and increases and decreases"""
         if self._should_skip_overview_kpi(block):
             return ""
         cards = ""
@@ -2230,9 +2160,7 @@ class HTMLRenderer:
     def _merge_dicts(
         self, base: Dict[str, Any] | None, override: Dict[str, Any] | None
     ) -> Dict[str, Any]:
-        """
-        递归合并两个字典，override覆盖base，均为新副本，避免副作用。
-        """
+        """Recursively merge two dictionaries, override covers base, and both are new copies to avoid side effects."""
         result = copy.deepcopy(base) if isinstance(base, dict) else {}
         if not isinstance(override, dict):
             return result
@@ -2244,7 +2172,7 @@ class HTMLRenderer:
         return result
 
     def _looks_like_chart_dataset(self, candidate: Any) -> bool:
-        """启发式判断对象是否包含Chart.js常见的labels/datasets结构"""
+        """Heuristically determines whether the object contains the common labels/datasets structure of Chart.js"""
         if not isinstance(candidate, dict):
             return False
         labels = candidate.get("labels")
@@ -2252,10 +2180,8 @@ class HTMLRenderer:
         return isinstance(labels, list) or isinstance(datasets, list)
 
     def _coerce_chart_data_structure(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        兼容LLM输出的Chart.js完整配置（含type/data/options）。
-        若data中嵌套一个真正的labels/datasets结构，则提取并返回该结构。
-        """
+        """Compatible with the complete configuration of Chart.js output by LLM (including type/data/options).
+        If there is a real labels/datasets structure nested in data, extract and return the structure."""
         if not isinstance(data, dict):
             return {}
         if self._looks_like_chart_dataset(data):
@@ -2269,12 +2195,10 @@ class HTMLRenderer:
     def _prepare_widget_payload(
         self, block: Dict[str, Any]
     ) -> tuple[Dict[str, Any], Dict[str, Any]]:
-        """
-        预处理widget数据，兼容部分block将Chart.js配置写入data字段的情况。
+        """Preprocessing widget data is compatible with some blocks writing Chart.js configuration into the data field.
 
-        返回:
-            tuple(props, data): 归一化后的props与chart数据
-        """
+        Return:
+            tuple(props, data): normalized props and chart data"""
         props = copy.deepcopy(block.get("props") or {})
         raw_data = block.get("data")
         data_copy = copy.deepcopy(raw_data) if isinstance(raw_data, dict) else raw_data
@@ -2298,7 +2222,7 @@ class HTMLRenderer:
 
     @staticmethod
     def _is_chart_data_empty(data: Dict[str, Any] | None) -> bool:
-        """检查图表数据是否为空或缺少有效datasets"""
+        """Check if chart data is empty or missing valid datasets"""
         if not isinstance(data, dict):
             return True
 
@@ -2316,7 +2240,7 @@ class HTMLRenderer:
         return True
 
     def _chart_cache_key(self, block: Dict[str, Any]) -> str:
-        """使用修复器的缓存算法生成稳定的key，便于跨阶段共享结果"""
+        """Use the repairer's caching algorithm to generate stable keys to facilitate sharing results across stages"""
         if hasattr(self, "chart_repairer") and block:
             try:
                 return self.chart_repairer.build_cache_key(block)
@@ -2325,15 +2249,15 @@ class HTMLRenderer:
         return str(id(block))
 
     def _note_chart_failure(self, cache_key: str, reason: str) -> None:
-        """记录修复失败原因，后续渲染直接使用占位提示"""
+        """Record the reason for repair failure, and use placeholder prompts directly for subsequent renderings."""
         if not cache_key:
             return
         if not reason:
-            reason = "LLM返回的图表信息格式有误，无法正常显示"
+            reason = "The format of the chart information returned by LLM is incorrect and cannot be displayed normally."
         self._chart_failure_notes[cache_key] = reason
 
     def _record_chart_failure_stat(self, cache_key: str | None = None) -> None:
-        """确保失败计数只统计一次"""
+        """Make sure the failure count is only counted once"""
         if cache_key and cache_key in self._chart_failure_recorded:
             return
         self.chart_validation_stats['failed'] += 1
@@ -2341,12 +2265,10 @@ class HTMLRenderer:
             self._chart_failure_recorded.add(cache_key)
 
     def _apply_cached_review_stats(self, block: Dict[str, Any]) -> None:
-        """
-        在已审查过的图表上重新累计统计信息，避免重复修复。
+        """Re-accumulate statistics on reviewed charts to avoid repeated fixes.
 
-        当渲染流程重置了统计但图表已经审查过（_chart_reviewed=True），
-        直接根据记录的状态累加各项计数，防止再次触发 ChartRepairer。
-        """
+        When the rendering process resets statistics but the chart has already been reviewed (_chart_reviewed=True),
+        Accumulate various counts directly based on the recorded status to prevent ChartRepairer from being triggered again."""
         if not isinstance(block, dict):
             return
 
@@ -2370,8 +2292,8 @@ class HTMLRenderer:
         validation_result: ValidationResult | None = None,
         fallback_reason: str | None = None
     ) -> str:
-        """拼接友好的失败提示"""
-        base = "LLM返回的图表信息格式有误，已尝试本地与多模型修复但仍无法正常显示。"
+        """Splice-friendly failure prompts"""
+        base = "The format of the chart information returned by LLM is incorrect. We have tried local and multi-model repairs but still cannot display it properly."
         detail = None
         if validation_result:
             if validation_result.errors:
@@ -2381,7 +2303,7 @@ class HTMLRenderer:
         if not detail and fallback_reason:
             detail = fallback_reason
         if detail:
-            text = f"{base} 提示：{detail}"
+            text = f"{base} Tip: {detail}"
             return text[:180] + ("..." if len(text) > 180 else "")
         return base
 
@@ -2391,8 +2313,8 @@ class HTMLRenderer:
         reason: str,
         widget_id: str | None = None
     ) -> str:
-        """输出图表失败时的简洁占位提示，避免破坏HTML/PDF布局"""
-        safe_title = self._escape_html(title or "图表未能展示")
+        """A concise placeholder prompt when outputting a chart fails to avoid damaging the HTML/PDF layout"""
+        safe_title = self._escape_html(title or "Chart failed to display")
         safe_reason = self._escape_html(reason)
         widget_attr = f' data-widget-id="{self._escape_attr(widget_id)}"' if widget_id else ""
         return f"""
@@ -2408,7 +2330,7 @@ class HTMLRenderer:
         """
 
     def _has_chart_failure(self, block: Dict[str, Any]) -> tuple[bool, str | None]:
-        """检查是否已有修复失败记录"""
+        """Check whether there is a repair failure record"""
         cache_key = self._chart_cache_key(block)
         if block.get("_chart_renderable") is False:
             return True, block.get("_chart_error_reason")
@@ -2421,12 +2343,10 @@ class HTMLRenderer:
         block: Dict[str, Any],
         chapter_context: Dict[str, Any] | None = None,
     ) -> None:
-        """
-        补全图表block中的缺失字段（如scales、datasets），提升容错性。
+        """Complete missing fields (such as scales and datasets) in chart blocks to improve fault tolerance.
 
-        - 将错误挂在block顶层的scales合并进props.options。
-        - 当data缺失或datasets为空时，尝试使用章节级的data作为兜底。
-        """
+        - Merge scales with errors at the top level of the block into props.options.
+        - When data is missing or datasets are empty, try to use chapter-level data as a fallback."""
 
         if not isinstance(block, dict):
             return
@@ -2438,25 +2358,25 @@ class HTMLRenderer:
         if not (isinstance(widget_type, str) and widget_type.startswith("chart.js")):
             return
 
-        # 确保props存在
+        # Make sure props exist
         props = block.get("props")
         if not isinstance(props, dict):
             block["props"] = {}
             props = block["props"]
 
-        # 将顶层scales合并进options，避免配置丢失
+        # Merge top-level scales into options to avoid configuration loss
         scales = block.get("scales")
         if isinstance(scales, dict):
             options = props.get("options") if isinstance(props.get("options"), dict) else {}
             props["options"] = self._merge_dicts(options, {"scales": scales})
 
-        # 确保data存在
+        # Make sure data exists
         data = block.get("data")
         if not isinstance(data, dict):
             data = {}
             block["data"] = data
 
-        # 如果datasets为空，尝试使用章节级data填充
+        # If datasets are empty, try to fill them with chapter-level data
         if chapter_context and self._is_chart_data_empty(data):
             chapter_data = chapter_context.get("data") if isinstance(chapter_context, dict) else None
             if isinstance(chapter_data, dict):
@@ -2470,7 +2390,7 @@ class HTMLRenderer:
 
                     block["data"] = merged_data
 
-        # 若仍缺少labels且数据点包含x值，自动生成便于fallback和坐标刻度
+        # If labels are still missing and the data points contain x values, they are automatically generated for fallback and coordinate scales.
         data_ref = block.get("data")
         if isinstance(data_ref, dict) and not data_ref.get("labels"):
             datasets_ref = data_ref.get("datasets")
@@ -2481,9 +2401,9 @@ class HTMLRenderer:
                     labels_from_data = []
                     for idx, point in enumerate(ds_data):
                         if isinstance(point, dict):
-                            label_text = point.get("x") or point.get("label") or f"点{idx + 1}"
+                            label_text = point.get("x") or point.get("label") or f"Point {idx + 1}"
                         else:
-                            label_text = f"点{idx + 1}"
+                            label_text = f"Point {idx + 1}"
                         labels_from_data.append(str(label_text))
 
                     if labels_from_data:
@@ -2496,12 +2416,10 @@ class HTMLRenderer:
         *,
         increment_stats: bool = True
     ) -> tuple[bool, str | None]:
-        """
-        确保图表已完成审查/修复，并将结果回写到原始block。
+        """Make sure the graph is reviewed/fixed and the results are written back to the original block.
 
-        返回:
-            (renderable, fail_reason)
-        """
+        Return:
+            (renderable, fail_reason)"""
         if not isinstance(block, dict):
             return True, None
 
@@ -2513,7 +2431,7 @@ class HTMLRenderer:
         is_wordcloud = 'wordcloud' in widget_type.lower() if isinstance(widget_type, str) else False
         cache_key = self._chart_cache_key(block)
 
-        # 已有失败记录或显式标记为不可渲染，直接复用结果
+        # If there is already a failure record or it is explicitly marked as non-renderable, the result can be reused directly.
         if block.get("_chart_renderable") is False:
             if increment_stats:
                 self.chart_validation_stats['total'] += 1
@@ -2533,7 +2451,7 @@ class HTMLRenderer:
             renderable = not failed and block.get("_chart_renderable", True) is not False
             return renderable, block.get("_chart_error_reason") or cached_reason
 
-        # 首次审查：先补全结构，再验证/修复
+        # First review: Complete the structure first, then verify/fix it
         self._normalize_chart_block(block, chapter_context)
 
         if increment_stats:
@@ -2551,20 +2469,20 @@ class HTMLRenderer:
 
         if not validation_result.is_valid:
             logger.warning(
-                f"图表 {block.get('widgetId', 'unknown')} 验证失败: {validation_result.errors}"
+                f"Chart {block.get('widgetId', 'unknown')} Validation failed: {validation_result.errors}"
             )
 
             repair_result = self.chart_repairer.repair(block, validation_result)
 
             if repair_result.success and repair_result.repaired_block:
-                # 修复成功，回写修复后的数据
+                # Repair successful, write back the repaired data
                 repaired_block = repair_result.repaired_block
                 block.clear()
                 block.update(repaired_block)
                 method = repair_result.method or "local"
                 logger.info(
-                    f"图表 {block.get('widgetId', 'unknown')} 修复成功 "
-                    f"(方法: {method}): {repair_result.changes}"
+                    f"Chart {block.get('widgetId', 'unknown')} repaired successfully"
+                    f"(Method: {method}): {repair_result.changes}"
                 )
 
                 if increment_stats:
@@ -2577,7 +2495,7 @@ class HTMLRenderer:
                 block["_chart_reviewed"] = True
                 return True, None
 
-            # 修复失败，记录失败并输出占位提示
+            # If the repair fails, the failure will be recorded and a placeholder prompt will be output.
             fail_reason = self._format_chart_error_reason(validation_result)
             block["_chart_renderable"] = False
             block["_chart_error_reason"] = fail_reason
@@ -2588,17 +2506,17 @@ class HTMLRenderer:
             if increment_stats:
                 self._record_chart_failure_stat(cache_key)
             logger.warning(
-                f"图表 {block.get('widgetId', 'unknown')} 修复失败，已跳过渲染: {fail_reason}"
+                f"Chart {block.get('widgetId', 'unknown')} repair failed, rendering skipped: {fail_reason}"
             )
             return False, fail_reason
 
-        # 验证通过
+        # Verification passed
         if increment_stats:
             self.chart_validation_stats['valid'] += 1
             if validation_result.warnings:
                 logger.info(
-                    f"图表 {block.get('widgetId', 'unknown')} 验证通过，"
-                    f"但有警告: {validation_result.warnings}"
+                    f"Chart {block.get('widgetId', 'unknown')} passed the verification,"
+                    f"But there are warnings: {validation_result.warnings}"
                 )
         block["_chart_review_status"] = "valid"
         block["_chart_review_method"] = "none"
@@ -2612,17 +2530,15 @@ class HTMLRenderer:
         reset_stats: bool = True,
         clone: bool = False
     ) -> Dict[str, Any]:
-        """
-        全局审查并修复图表，将修复结果回写到原始 IR，避免多次渲染重复修复。
+        """Review and repair graphs globally, writing repair results back to the original IR to avoid repeating repairs on multiple renders.
 
-        参数:
-            document_ir: 原始 Document IR
-            reset_stats: 是否重置统计数据
-            clone: 是否返回修复后的深拷贝（原始 IR 仍会被回写修复结果）
+        Parameters:
+            document_ir: original Document IR
+            reset_stats: whether to reset statistics
+            clone: whether to return a deep copy after repair (the original IR will still be written back with the repair result)
 
-        返回:
-            修复后的 IR（可能是原对象或其深拷贝）
-        """
+        Return:
+            Repaired IR (may be the original object or its deep copy)"""
         if reset_stats:
             self._reset_chart_validation_stats()
 
@@ -2661,25 +2577,23 @@ class HTMLRenderer:
         return copy.deepcopy(target_ir) if clone else target_ir
 
     def _render_widget(self, block: Dict[str, Any]) -> str:
-        """
-        渲染Chart.js等交互组件的占位容器，并记录配置JSON。
+        """Render placeholder containers for interactive components such as Chart.js and record configuration JSON.
 
-        在渲染前进行图表验证和修复：
-        1. validate：ChartValidator 检查 block 的 data/props/options 结构；
-        2. repair：若失败，先本地修补（缺 labels/datasets/scale 时兜底），再调用 LLM API；
-        3. 失败兜底：写入 _chart_renderable=False 及 _chart_error_reason，输出错误占位而非抛异常。
+        Chart validation and repair before rendering:
+        1. validate: ChartValidator checks the data/props/options structure of the block;
+        2. repair: If it fails, repair it locally first (reply if labels/datasets/scale is missing), and then call the LLM API;
+        3. Failure recovery: write _chart_renderable=False and _chart_error_reason to output an error occupancy instead of throwing an exception.
 
-        参数（对应 IR 层级）：
-        - block.widgetType: "chart.js/bar"/"chart.js/line"/"wordcloud" 等，决定渲染器与校验策略；
-        - block.widgetId: 组件唯一ID，用于canvas/data script绑定；
-        - block.props: 透传到前端 Chart.js options，例如 props.title / props.options.legend；
-        - block.data: {labels, datasets} 等数据；缺失时会尝试从章节级 chapter.data 补齐；
-        - block.dataRef: 外部数据引用，暂作为透传记录。
+        Parameters (corresponding to IR level):
+        - block.widgetType:"chart.js/bar"/"chart.js/line"/"wordcloud"etc., decide the renderer and verification strategy;
+        - block.widgetId: unique ID of the component, used for canvas/data script binding;
+        - block.props: transparently transmitted to the front-end Chart.js options, such as props.title / props.options.legend;
+        - block.data: {labels, datasets} and other data; if missing, try to fill it in from chapter-level chapter.data;
+        - block.dataRef: external data reference, temporarily used as a transparent transmission record.
 
-        返回:
-            str: 含canvas与配置脚本的HTML。
-        """
-        # 统一的审查/修复入口，避免后续重复修复
+        Return:
+            str: HTML containing canvas and configuration script."""
+        # Unified review/repair entrance to avoid subsequent repeated repairs
         widget_type = block.get('widgetType', '')
         is_chart = isinstance(widget_type, str) and widget_type.startswith('chart.js')
         is_wordcloud = isinstance(widget_type, str) and 'wordcloud' in widget_type.lower()
@@ -2696,13 +2610,13 @@ class HTMLRenderer:
 
         widget_id = block.get('widgetId')
         props_snapshot = block.get("props") if isinstance(block.get("props"), dict) else {}
-        display_title = props_snapshot.get("title") or block.get("title") or widget_id or "图表"
+        display_title = props_snapshot.get("title") or block.get("title") or widget_id or "chart"
 
         if is_chart and not renderable:
-            reason = fail_reason or "LLM返回的图表信息格式有误，无法正常显示"
+            reason = fail_reason or "The format of the chart information returned by LLM is incorrect and cannot be displayed normally."
             return self._render_chart_error_placeholder(display_title, reason, widget_id)
 
-        # 渲染图表HTML
+        # Render chart HTML
         self.chart_counter += 1
         canvas_id = f"chart-{self.chart_counter}"
         config_id = f"chart-config-{self.chart_counter}"
@@ -2738,7 +2652,7 @@ class HTMLRenderer:
         """
 
     def _render_widget_fallback(self, data: Dict[str, Any], widget_id: str | None = None) -> str:
-        """渲染图表数据的文本兜底视图，避免Chart.js加载失败时出现空白"""
+        """Render a text bottom view of chart data to avoid blanks when Chart.js fails to load."""
         if not isinstance(data, dict):
             return ""
         labels = data.get("labels") or []
@@ -2748,7 +2662,7 @@ class HTMLRenderer:
 
         widget_attr = f' data-widget-id="{self._escape_attr(widget_id)}"' if widget_id else ""
         header_cells = "".join(
-            f"<th>{self._escape_html(ds.get('label') or f'系列{idx + 1}')}</th>"
+            f"<th>{self._escape_html(ds.get('label') or f'series{idx + 1}')}</th>"
             for idx, ds in enumerate(datasets)
         )
         body_rows = ""
@@ -2763,14 +2677,13 @@ class HTMLRenderer:
         <div class="chart-fallback" data-prebuilt="true"{widget_attr}>
           <table>
             <thead>
-              <tr><th>类别</th>{header_cells}</tr>
+              <tr><th>Category</th>{header_cells}</tr>
             </thead>
             <tbody>
               {body_rows}
             </tbody>
           </table>
-        </div>
-        """
+        </div>"""
         return table_html
 
     def _render_wordcloud_fallback(
@@ -2779,9 +2692,9 @@ class HTMLRenderer:
         widget_id: str | None = None,
         block_data: Any | None = None,
     ) -> str:
-        """为词云提供表格兜底，避免WordCloud渲染失败后页面空白"""
+        """Provide table backends for word clouds to avoid blank pages after WordCloud rendering fails"""
         def _collect_items(raw: Any) -> list[dict]:
-            """将多种词云输入格式（数组/对象/元组/纯文本）规整为统一的词条列表"""
+            """Organize multiple word cloud input formats (array/object/tuple/plain text) into a unified list of terms"""
             collected: list[dict] = []
             skip_keys = {"items", "data", "words", "labels", "datasets", "sourceData"}
             if isinstance(raw, list):
@@ -2792,7 +2705,7 @@ class HTMLRenderer:
                         category = item.get("category") or ""
                         if text:
                             collected.append({"word": str(text), "weight": weight, "category": str(category)})
-                        # 若嵌套了 items/words/data 列表，递归提取
+                        # If the items/words/data list is nested, recursively extract
                         for nested_key in ("items", "words", "data"):
                             nested = item.get(nested_key)
                             if isinstance(nested, list):
@@ -2806,7 +2719,7 @@ class HTMLRenderer:
                     elif isinstance(item, str):
                         collected.append({"word": item, "weight": 1.0, "category": ""})
             elif isinstance(raw, dict):
-                # 若包含 items/words/data 列表，优先递归提取，不把键名当词
+                # If the items/words/data list is included, recursive extraction is preferred and the key names are not treated as words.
                 handled = False
                 for nested_key in ("items", "words", "data"):
                     nested = raw.get(nested_key)
@@ -2816,7 +2729,7 @@ class HTMLRenderer:
                 if handled:
                     return collected
 
-                # 非Chart结构且不包含skip_keys时，把key/value当作词云条目
+                # When it is not a Chart structure and does not contain skip_keys, the key/value is treated as a word cloud entry.
                 if not {"labels", "datasets"}.intersection(raw.keys()):
                     for text, weight in raw.items():
                         if text in skip_keys:
@@ -2828,7 +2741,7 @@ class HTMLRenderer:
         seen: set[str] = set()
         candidates = []
         if isinstance(props, dict):
-            # 仅接受明确的词条数组字段，避免将嵌套items误当作词条
+            # Only accept explicit entry array fields to avoid mistaking nested items for entries
             if "data" in props and isinstance(props.get("data"), list):
                 candidates.append(props["data"])
             if "words" in props and isinstance(props.get("words"), list):
@@ -2837,7 +2750,7 @@ class HTMLRenderer:
                 candidates.append(props["items"])
         candidates.append((props or {}).get("sourceData"))
 
-        # 允许使用block.data兜底，避免缺失props时出现空白
+        # Allows the use of block.data to avoid gaps when props are missing.
         if block_data is not None:
             if isinstance(block_data, dict) and "items" in block_data and isinstance(block_data.get("items"), list):
                 candidates.append(block_data["items"])
@@ -2856,7 +2769,7 @@ class HTMLRenderer:
             return ""
 
         def _format_weight(value: Any) -> str:
-            """统一格式化权重，支持百分比/数值与字符串回退"""
+            """Unified formatting of weights, supporting percentage/numeric and string fallback"""
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 if 0 <= value <= 1.5:
                     return f"{value * 100:.1f}%"
@@ -2874,52 +2787,51 @@ class HTMLRenderer:
         <div class="chart-fallback" data-prebuilt="true"{widget_attr}>
           <table>
             <thead>
-              <tr><th>关键词</th><th>权重</th><th>类别</th></tr>
+              <tr><th>Keywords</th><th>Weight</th><th>Category</th></tr>
             </thead>
             <tbody>
               {rows}
             </tbody>
           </table>
-        </div>
-        """
+        </div>"""
 
     def _log_chart_validation_stats(self):
-        """输出图表验证统计信息"""
+        """Output chart validation statistics"""
         stats = self.chart_validation_stats
         if stats['total'] == 0:
             return
 
         logger.info("=" * 60)
-        logger.info("图表验证统计")
+        logger.info("Chart validation statistics")
         logger.info("=" * 60)
-        logger.info(f"总图表数量: {stats['total']}")
-        logger.info(f"  ✓ 验证通过: {stats['valid']} ({stats['valid']/stats['total']*100:.1f}%)")
+        logger.info(f"Total number of charts: {stats['total']}")
+        logger.info(f"✓ Verification passed: {stats['valid']} ({stats['valid']/stats['total']*100:.1f}%)")
 
         if stats['repaired_locally'] > 0:
             logger.info(
-                f"  ⚠ 本地修复: {stats['repaired_locally']} "
+                f"⚠ Local repair: {stats['repaired_locally']}"
                 f"({stats['repaired_locally']/stats['total']*100:.1f}%)"
             )
 
         if stats['repaired_api'] > 0:
             logger.info(
-                f"  ⚠ API修复: {stats['repaired_api']} "
+                f"⚠ API fix: {stats['repaired_api']}"
                 f"({stats['repaired_api']/stats['total']*100:.1f}%)"
             )
 
         if stats['failed'] > 0:
             logger.warning(
-                f"  ✗ 修复失败: {stats['failed']} "
+                f"✗ Repair failed: {stats['failed']}"
                 f"({stats['failed']/stats['total']*100:.1f}%) - "
-                f"这些图表将展示简洁占位提示"
+                f"These charts will show concise placeholder tips"
             )
 
         logger.info("=" * 60)
 
-    # ====== 前置信息防护 ======
+    # ====== Pre-information protection ======
 
     def _kpi_signature_from_items(self, items: Any) -> tuple | None:
-        """将KPI数组转换为可比较的签名"""
+        """Convert array of KPIs into comparable signatures"""
         if not isinstance(items, list):
             return None
         normalized = []
@@ -2930,20 +2842,18 @@ class HTMLRenderer:
         return tuple(normalized) if normalized else None
 
     def _normalize_kpi_item(self, item: Any) -> tuple[str, str, str, str, str] | None:
-        """
-        将单条KPI记录规整为可对比的签名。
+        """Organize individual KPI records into comparable signatures.
 
-        参数:
-            item: KPI数组中的原始字典，可能缺失字段或类型混杂。
+        Parameters:
+            item: The original dictionary in the KPI array, which may have missing fields or mixed types.
 
-        返回:
-            tuple | None: (label, value, unit, delta, tone) 的五元组；若输入非法则为None。
-        """
+        Return:
+            tuple | None: a five-tuple of (label, value, unit, delta, tone); if the input is invalid, it is None."""
         if not isinstance(item, dict):
             return None
 
         def normalize(value: Any) -> str:
-            """统一各类值的表现形式，便于生成稳定签名"""
+            """Unify the representation of various values ​​to facilitate the generation of stable signatures"""
             if value is None:
                 return ""
             if isinstance(value, (int, float)):
@@ -2958,7 +2868,7 @@ class HTMLRenderer:
         return label, value, unit, delta, tone
 
     def _should_skip_overview_kpi(self, block: Dict[str, Any]) -> bool:
-        """若KPI内容与封面一致，则判定为重复总览"""
+        """If the KPI content is consistent with the cover, it will be determined as a duplicate overview."""
         if not self.hero_kpi_signature:
             return False
         block_signature = self._kpi_signature_from_items(block.get("items"))
@@ -2966,18 +2876,18 @@ class HTMLRenderer:
             return False
         return block_signature == self.hero_kpi_signature
 
-    # ====== 行内渲染 ======
+    # ====== Inline rendering ======
 
     def _normalize_inline_payload(self, run: Dict[str, Any]) -> tuple[str, List[Dict[str, Any]]]:
-        """将嵌套inline node展平成基础文本与marks"""
+        """Flatten nested inline nodes into basic text and marks"""
         if not isinstance(run, dict):
             return ("" if run is None else str(run)), []
 
-        # 处理 inlineRun 类型：递归展开其 inlines 数组
+        # Handle inlineRun types: recursively expand their inlines array
         if run.get("type") == "inlineRun":
             inner_inlines = run.get("inlines") or []
             outer_marks = run.get("marks") or []
-            # 递归合并所有内部 inlines 的文本
+            # Recursively merge text within all inlines
             texts = []
             all_marks = list(outer_marks)
             for inline in inner_inlines:
@@ -3033,7 +2943,7 @@ class HTMLRenderer:
                     else:
                         inline_payload = self._coerce_inline_payload(payload)
                         if inline_payload:
-                            # 处理 inlineRun 类型
+                            # Handling inlineRun types
                             if inline_payload.get("type") == "inlineRun":
                                 return self._normalize_inline_payload(inline_payload)
                             nested_text = inline_payload.get("text")
@@ -3049,7 +2959,7 @@ class HTMLRenderer:
 
     @staticmethod
     def _normalize_latex_string(raw: Any) -> str:
-        """去除外层数学定界符，兼容 $...$、$$...$$、\\(\\)、\\[\\] 等格式"""
+        """Removes outer mathematical delimiters and is compatible with $...$, $$...$$, \\(\\), \\[\\] and other formats"""
         if not isinstance(raw, str):
             return ""
         latex = raw.strip()
@@ -3072,12 +2982,10 @@ class HTMLRenderer:
         math_id: str | list | None = None,
         allow_display_block: bool = False
     ) -> str | None:
-        """
-        识别纯文本中的数学定界符并渲染为math-inline/math-block，提升兼容性。
+        """Recognize math delimiters in plain text and render them as math-inline/math-block to improve compatibility.
 
-        - 支持 $...$、$$...$$、\\(\\)、\\[\\]。
-        - 若未检测到公式，返回None。
-        """
+        - Supports $...$, $$...$$, \\(\\), \\[\\].
+        - If no formula is detected, None is returned."""
         if not isinstance(text, str) or not text:
             return None
 
@@ -3095,7 +3003,7 @@ class HTMLRenderer:
             prefix = text[cursor:start]
             raw = next(g for g in m.groups()[1:] if g is not None)
             latex = self._normalize_latex_string(raw)
-            # 若已有math_id，直接使用，避免与SVG注入ID不一致；否则按局部序号生成
+            # If math_id already exists, use it directly to avoid inconsistency with the SVG injection ID; otherwise, generate it according to the local serial number
             if id_iter:
                 mid = next(id_iter, f"auto-math-{idx}")
             else:
@@ -3109,7 +3017,7 @@ class HTMLRenderer:
             )
             use_block = allow_display_block and is_display and is_standalone
             if use_block:
-                # 独立display公式，跳过两侧空白，直接渲染块级
+                # Independent display formula, skip the blanks on both sides, and directly render the block level
                 parts.append(f'<div class="math-block"{id_attr}>$$ {self._escape_html(latex)} $$</div>')
                 cursor = len(text)
                 break
@@ -3125,11 +3033,11 @@ class HTMLRenderer:
 
     @staticmethod
     def _coerce_inline_payload(payload: Dict[str, Any]) -> Dict[str, Any] | None:
-        """尽力将字符串里的内联节点恢复为dict，修复渲染遗漏"""
+        """Try our best to restore inline nodes in strings to dict and fix rendering omissions"""
         if not isinstance(payload, dict):
             return None
         inline_type = payload.get("type")
-        # 支持 inlineRun 类型：包含嵌套的 inlines 数组
+        # Support for inlineRun type: contains nested inlines arrays
         if inline_type == "inlineRun":
             return payload
         if inline_type and inline_type not in {"inline", "text"}:
@@ -3139,15 +3047,13 @@ class HTMLRenderer:
         return payload
 
     def _render_inline(self, run: Dict[str, Any]) -> str:
-        """
-        渲染单个inline run，支持多种marks叠加。
+        """Render a single inline run and support the overlay of multiple marks.
 
-        参数:
-            run: 含 text 与 marks 的内联节点。
+        Parameters:
+            run: Inline node containing text and marks.
 
-        返回:
-            str: 已包裹标签/样式的HTML片段。
-        """
+        Return:
+            str: HTML fragment wrapped with tags/styles."""
         text_value, marks = self._normalize_inline_payload(run)
         math_mark = next((mark for mark in marks if mark.get("type") == "math"), None)
         if math_mark:
@@ -3158,7 +3064,7 @@ class HTMLRenderer:
             id_attr = f' data-math-id="{math_id}"' if math_id else ""
             return f'<span class="math-inline"{id_attr}>\\( {self._escape_html(latex)} \\)</span>'
 
-        # 尝试从纯文本中提取数学公式（即便没有math mark）
+        # Try to extract mathematical formulas from plain text (even without math mark)
         math_id_hint = run.get("mathIds") or run.get("mathId")
         mathified = self._render_text_with_inline_math(text_value, math_id_hint)
         if mathified is not None:
@@ -3228,7 +3134,7 @@ class HTMLRenderer:
         return "".join(prefix) + text + "".join(suffix)
 
     def _render_markdown_bold_fallback(self, text: str) -> str:
-        """在LLM未使用marks时兜底转换**粗体**"""
+        """Convert **Bold** when LLM is not using marks"""
         if not text:
             return ""
         result: List[str] = []
@@ -3248,14 +3154,12 @@ class HTMLRenderer:
             cursor = end + 2
         return "".join(result)
 
-    # ====== 文本 / 安全工具 ======
+    # ====== Text / Security Tools ======
 
     def _clean_text_from_json_artifacts(self, text: Any) -> str:
-        """
-        清理文本中的JSON片段和伪造的结构标记。
+        """Clean JSON fragments and fake structure markup in text.
 
-        LLM有时会在文本字段中混入未完成的JSON片段，如：
-        "描述文本，{ \"chapterId\": \"S3" 或 "描述文本，{ \"level\": 2"
+        LLM sometimes mixes in unfinished JSON fragments in text fields, like:"描述文本，{ \"chapterId\": \"S3" 或 "Description text, { \"level\": 2"
 
         此方法会：
         1. 移除不完整的JSON对象（以 { 开头但未正确闭合的）
@@ -3269,46 +3173,46 @@ class HTMLRenderer:
             str: 清理后的纯文本
         """
         if not text:
-            return ""
+            return ""text_str = self._safe_text(text)
 
-        text_str = self._safe_text(text)
-
-        # 模式1: 移除以逗号+空白+{开头的不完整JSON对象
-        # 例如: "文本，{ \"key\": \"value\"" 或 "文本，{\\n  \"key\""
+        # Mode 1: Remove incomplete JSON objects starting with comma+blank+{
+        # For example:"ting with comma+blank+{
+        # For example: "text,{ \"key\": \"value\"" or "text,{\\n \"key\""""
         text_str = re.sub(r',\s*\{[^}]*$', '', text_str)
 
-        # 模式2: 移除以逗号+空白+[开头的不完整JSON数组
+        # Mode 2: Remove incomplete JSON arrays starting with comma+blank+[
         text_str = re.sub(r',\s*\[[^\]]*$', '', text_str)
 
-        # 模式3: 移除孤立的 { 加上后续内容（如果没有匹配的 }）
-        # 检查是否有未闭合的 {
+        # Pattern 3: Remove orphaned { followed by content (if no matching })
+        # Check if there is an unclosed {
         open_brace_pos = text_str.rfind('{')
         if open_brace_pos != -1:
             close_brace_pos = text_str.rfind('}')
             if close_brace_pos < open_brace_pos:
-                # { 在 } 后面或没有 }，说明是未闭合的
-                # 截断到 { 之前
+                # {After } or without }, it means it is unclosed
+                # truncate before {
                 text_str = text_str[:open_brace_pos].rstrip(',，、 \t\n')
 
-        # 模式4: 类似处理 [
+        # Mode 4: Similar processing [
         open_bracket_pos = text_str.rfind('[')
         if open_bracket_pos != -1:
             close_bracket_pos = text_str.rfind(']')
             if close_bracket_pos < open_bracket_pos:
-                # [ 在 ] 后面或没有 ]，说明是未闭合的
+                # [After ] or without ], it means it is unclosed
                 text_str = text_str[:open_bracket_pos].rstrip(',，、 \t\n')
 
-        # 模式5: 移除看起来像JSON键值对的片段，如 "chapterId": "S3
-        # 这种情况通常出现在上面的模式之后
+        # Pattern 5: Remove fragments that look like JSON key-value pairs, such as "chapterId": "S3
+        # This situation usually occurs after the above pattern
+        text_str = re.sub(r',?\s*"rn
         text_str = re.sub(r',?\s*"[^"]+"\s*:\s*"[^"]*$', '', text_str)
         text_str = re.sub(r',?\s*"[^"]+"\s*:\s*[^,}\]]*$', '', text_str)
 
-        # 清理末尾的逗号和空白
-        text_str = text_str.rstrip(',，、 \t\n')
+        # Clean up trailing commas and whitespace
+        text_str = text_str.rstrip(',,, \t\n')
 
         return text_str.strip()
 
-    def _safe_text(self, value: Any) -> str:
+    def _safe_text(self, value: Any) -> str:"value: Any) -> str:
         """将任意值安全转换为字符串，None与复杂对象容错"""
         if value is None:
             return ""
@@ -3330,24 +3234,25 @@ class HTMLRenderer:
         escaped = html.escape(self._safe_text(value), quote=True)
         return escaped.replace("\n", " ").replace("\r", " ")
 
-    # ====== CSS / JS（样式与脚本） ======
+    # ====== CSS/JS (Styles & Scripts) ======
 
-    def _build_css(self, tokens: Dict[str, Any]) -> str:
-        """根据主题token拼接整页CSS，包括响应式与打印样式"""
-        # 安全获取各个配置项，确保都是字典类型
+    def _build_css(self, tokens: Dict[str, Any]) -> str:"
+        """根据主题token拼接整页CSS，包括响应式与打印样式"""# Safely obtain each configuration item, ensuring that they are all dictionary types
+        colors_raw = tokens.get(" they are all dictionary types
         colors_raw = tokens.get("colors")
         colors = colors_raw if isinstance(colors_raw, dict) else {}
 
         typography_raw = tokens.get("typography")
         typography = typography_raw if isinstance(typography_raw, dict) else {}
 
-        # 安全获取fonts，确保是字典类型
+        # Get fonts safely, make sure it is a dictionary type
+        fonts_raw = tokens.get("e
         fonts_raw = tokens.get("fonts") or typography.get("fonts")
         if isinstance(fonts_raw, dict):
             fonts = fonts_raw
         else:
-            # 如果fonts是字符串或None，构造一个字典
-            font_family = typography.get("fontFamily")
+            # If fonts is a string or None, construct a dictionary
+            font_family = typography.get("font_family = typography.get("fontFamily")
             if isinstance(font_family, str):
                 fonts = {"body": font_family, "heading": font_family}
             else:
@@ -3399,22 +3304,22 @@ class HTMLRenderer:
   --card-bg: {card}; /* 含义：卡片/容器背景色；设置：在 themeTokens 中覆盖或改此默认值 */
   --border-color: {border}; /* 含义：常规边框色；设置：在 themeTokens 中覆盖或改此默认值 */
   --shadow-color: {shadow}; /* 含义：阴影基色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-insight-bg: #f4f7ff; /* 含义：Insight 引擎卡片背景；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-insight-border: #dce7ff; /* 含义：Insight 引擎边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-insight-text: #1f4b99; /* 含义：Insight 引擎文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-media-bg: #fff6ec; /* 含义：Media 引擎卡片背景；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-media-border: #ffd9b3; /* 含义：Media 引擎边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-media-text: #b65a1a; /* 含义：Media 引擎文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-query-bg: #f1fbf5; /* 含义：Query 引擎卡片背景；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-query-border: #c7ebd6; /* 含义：Query 引擎边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-query-text: #1d6b3f; /* 含义：Query 引擎文字色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --engine-insight-bg: # f4f7ff; /* Meaning: Insight engine card background; setting: override or change this default value in themeTokens */
+  --engine-insight-border: # dce7ff; /* Meaning: Insight engine border; setting: override or change this default value in themeTokens */
+  --engine-insight-text: # 1f4b99; /* Meaning: Insight engine text color; setting: override or change this default value in themeTokens */
+  --engine-media-bg: # fff6ec; /* Meaning: Media engine card background; setting: override or change this default value in themeTokens */
+  --engine-media-border: # ffd9b3; /* Meaning: Media engine border; setting: override or change this default value in themeTokens */
+  --engine-media-text: # b65a1a; /* Meaning: Media engine text color; setting: override or change this default value in themeTokens */
+  --engine-query-bg: # f1fbf5; /* Meaning: Query engine card background; setting: override or change this default value in themeTokens */
+  --engine-query-border: # c7ebd6; /* Meaning: Query engine border; setting: override or change this default value in themeTokens */
+  --engine-query-text: # 1d6b3f; /* Meaning: Query engine text color; setting: override or change this default value in themeTokens */
   --engine-quote-shadow: 0 12px 30px rgba(0,0,0,0.04); /* 含义：Engine 引用阴影；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-strength: #1c7f6e; /* 含义：SWOT 优势主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-weakness: #c0392b; /* 含义：SWOT 劣势主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-opportunity: #1f5ab3; /* 含义：SWOT 机会主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-threat: #b36b16; /* 含义：SWOT 威胁主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-on-light: #0f1b2b; /* 含义：SWOT 亮底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-on-dark: #f7fbff; /* 含义：SWOT 暗底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --swot-strength: # 1c7f6e; /* Meaning: SWOT dominant main color; setting: override or change this default value in themeTokens */
+  --swot-weakness: # c0392b; /* Meaning: SWOT disadvantage main color; setting: override or change this default value in themeTokens */
+  --swot-opportunity: # 1f5ab3; /* Meaning: SWOT opportunity main color; setting: override or change this default value in themeTokens */
+  --swot-threat: # b36b16; /* Meaning: SWOT threat main color; setting: override or change this default value in themeTokens */
+  --swot-on-light: # 0f1b2b; /* Meaning: SWOT bright text color; setting: override or change this default value in themeTokens */
+  --swot-on-dark: # f7fbff; /* Meaning: SWOT dark text color; setting: override or change this default value in themeTokens */
   --swot-text: var(--text-color); /* 含义：SWOT 文本主色；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-muted: rgba(0,0,0,0.58); /* 含义：SWOT 次文本色；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-surface: rgba(255,255,255,0.92); /* 含义：SWOT 卡片表面色；设置：在 themeTokens 中覆盖或改此默认值 */
@@ -3436,12 +3341,12 @@ class HTMLRenderer:
   --swot-cell-threat-border: rgba(179,107,22,0.35); /* 含义：SWOT 威胁边框；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-item-border: rgba(0,0,0,0.05); /* 含义：SWOT 条目边框；设置：在 themeTokens 中覆盖或改此默认值 */
   /* PEST 分析变量 - 紫青色系 */
-  --pest-political: #8e44ad; /* 含义：PEST 政治维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-economic: #16a085; /* 含义：PEST 经济维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-social: #e84393; /* 含义：PEST 社会维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-technological: #2980b9; /* 含义：PEST 技术维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-on-light: #1a1a2e; /* 含义：PEST 亮底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-on-dark: #f8f9ff; /* 含义：PEST 暗底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --pest-political: # 8e44ad; /* Meaning: PEST political dimension main color; setting: override or change this default value in themeTokens */
+  --pest-economic: # 16a085; /* Meaning: PEST economic dimension main color; setting: override or change this default value in themeTokens */
+  --pest-social: # e84393; /* Meaning: PEST social dimension main color; setting: override or change this default value in themeTokens */
+  --pest-technological: # 2980b9; /* Meaning: Main color of PEST technical dimension; Setting: Override or change this default value in themeTokens */
+  --pest-on-light: # 1a1a2e; /* Meaning: PEST bright text color; setting: override or change this default value in themeTokens */
+  --pest-on-dark: # f8f9ff; /* Meaning: PEST dark text color; setting: override or change this default value in themeTokens */
   --pest-text: var(--text-color); /* 含义：PEST 文本主色；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-muted: rgba(0,0,0,0.55); /* 含义：PEST 次文本色；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-surface: rgba(255,255,255,0.88); /* 含义：PEST 卡片表面色；设置：在 themeTokens 中覆盖或改此默认值 */
@@ -3464,39 +3369,39 @@ class HTMLRenderer:
   --pest-item-border: rgba(0,0,0,0.06); /* 含义：PEST 条目边框；设置：在 themeTokens 中覆盖或改此默认值 */
 }} /* 结束 :root */
 .dark-mode {{ /* 含义：暗色主题变量区域；设置：在本块内调整相关属性 */
-  --bg-color: #121212; /* 含义：页面背景色主色调；设置：在 themeTokens 中覆盖或改此默认值 */
-  --text-color: #e0e0e0; /* 含义：正文文本基础颜色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --primary-color: #6ea8fe; /* 含义：主色调（按钮/高亮）；设置：在 themeTokens 中覆盖或改此默认值 */
-  --primary-color-light: #91caff; /* 含义：主色调浅色，用于悬浮/渐变；设置：在 themeTokens 中覆盖或改此默认值 */
-  --primary-color-dark: #1f6feb; /* 含义：主色调深色，用于强调；设置：在 themeTokens 中覆盖或改此默认值 */
-  --secondary-color: #f28b82; /* 含义：次级色（提示/标签）；设置：在 themeTokens 中覆盖或改此默认值 */
-  --secondary-color-light: #f9b4ae; /* 含义：次级色浅色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --secondary-color-dark: #d9655c; /* 含义：次级色深色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --card-bg: #1f1f1f; /* 含义：卡片/容器背景色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --border-color: #2c2c2c; /* 含义：常规边框色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --bg-color: # 121212; /* Meaning: Main color of page background color; Setting: Override or change this default value in themeTokens */
+  --text-color: # e0e0e0; /* Meaning: basic text color; setting: override or change this default value in themeTokens */
+  --primary-color: # 6ea8fe; /* Meaning: main color (button/highlight); setting: override or change this default value in themeTokens */
+  --primary-color-light: # 91caff; /* Meaning: light main color, used for suspension/gradient; setting: override or change this default value in themeTokens */
+  --primary-color-dark: # 1f6feb; /* Meaning: Main color is dark, used for emphasis; Setting: Override or change this default value in themeTokens */
+  --secondary-color: # f28b82; /* Meaning: secondary color (prompt/label); setting: override or change this default value in themeTokens */
+  --secondary-color-light: # f9b4ae; /* Meaning: light secondary color; setting: override or change this default value in themeTokens */
+  --secondary-color-dark: # d9655c; /* Meaning: secondary color is dark; setting: override or change this default value in themeTokens */
+  --card-bg: # 1f1f1f; /* Meaning: card/container background color; setting: override or change this default value in themeTokens */
+  --border-color: # 2c2c2c; /* Meaning: regular border color; setting: override or change this default value in themeTokens */
   --shadow-color: rgba(0, 0, 0, 0.4); /* 含义：阴影基色；设置：在 themeTokens 中覆盖或改此默认值 */
   --engine-insight-bg: rgba(145, 202, 255, 0.08); /* 含义：Insight 引擎卡片背景；设置：在 themeTokens 中覆盖或改此默认值 */
   --engine-insight-border: rgba(145, 202, 255, 0.45); /* 含义：Insight 引擎边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-insight-text: #9dc2ff; /* 含义：Insight 引擎文字色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --engine-insight-text: # 9dc2ff; /* Meaning: Insight engine text color; setting: override or change this default value in themeTokens */
   --engine-media-bg: rgba(255, 196, 138, 0.08); /* 含义：Media 引擎卡片背景；设置：在 themeTokens 中覆盖或改此默认值 */
   --engine-media-border: rgba(255, 196, 138, 0.45); /* 含义：Media 引擎边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-media-text: #ffcb9b; /* 含义：Media 引擎文字色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --engine-media-text: # ffcb9b; /* Meaning: Media engine text color; setting: override or change this default value in themeTokens */
   --engine-query-bg: rgba(141, 215, 165, 0.08); /* 含义：Query 引擎卡片背景；设置：在 themeTokens 中覆盖或改此默认值 */
   --engine-query-border: rgba(141, 215, 165, 0.45); /* 含义：Query 引擎边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --engine-query-text: #a7e2ba; /* 含义：Query 引擎文字色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --engine-query-text: # a7e2ba; /* Meaning: Query engine text color; setting: override or change this default value in themeTokens */
   --engine-quote-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); /* 含义：Engine 引用阴影；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-strength: #1c7f6e; /* 含义：SWOT 优势主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-weakness: #e06754; /* 含义：SWOT 劣势主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-opportunity: #5a8cff; /* 含义：SWOT 机会主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-threat: #d48a2c; /* 含义：SWOT 威胁主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-on-light: #0f1b2b; /* 含义：SWOT 亮底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-on-dark: #e6f0ff; /* 含义：SWOT 暗底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-text: #e6f0ff; /* 含义：SWOT 文本主色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --swot-strength: # 1c7f6e; /* Meaning: SWOT dominant main color; setting: override or change this default value in themeTokens */
+  --swot-weakness: # e06754; /* Meaning: SWOT disadvantage main color; setting: override or change this default value in themeTokens */
+  --swot-opportunity: # 5a8cff; /* Meaning: SWOT opportunity main color; setting: override or change this default value in themeTokens */
+  --swot-threat: # d48a2c; /* Meaning: SWOT threat main color; setting: override or change this default value in themeTokens */
+  --swot-on-light: # 0f1b2b; /* Meaning: SWOT bright text color; setting: override or change this default value in themeTokens */
+  --swot-on-dark: # e6f0ff; /* Meaning: SWOT dark text color; setting: override or change this default value in themeTokens */
+  --swot-text: # e6f0ff; /* Meaning: SWOT text main color; setting: override or change this default value in themeTokens */
   --swot-muted: rgba(230,240,255,0.75); /* 含义：SWOT 次文本色；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-surface: rgba(255,255,255,0.08); /* 含义：SWOT 卡片表面色；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-chip-bg: rgba(255,255,255,0.14); /* 含义：SWOT 标签底色；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-tag-border: rgba(255,255,255,0.24); /* 含义：SWOT 标签边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --swot-card-bg: radial-gradient(140% 140% at 18% 18%, rgba(110,168,254,0.18), transparent 55%), radial-gradient(120% 140% at 82% 0%, rgba(28,127,110,0.16), transparent 52%), linear-gradient(160deg, #0b1424 0%, #0b1f31 52%, #0a1626 100%); /* 含义：SWOT 卡片背景渐变；设置：在 themeTokens 中覆盖或改此默认值 */
+  --swot-card-bg: radial-gradient(140% 140% at 18% 18%, rgba(110,168,254,0.18), transparent 55%), radial-gradient(120% 140% at 82% 0%, rgba(28,127,110,0.16), transparent 52%), linear-gradient(160deg, # 0b1424 0%, #0b1f31 52%, #0a1626 100%); /* Meaning: SWOT card background gradient; setting: override or change this default value in themeTokens */
   --swot-card-border: rgba(255,255,255,0.14); /* 含义：SWOT 卡片边框；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-card-shadow: 0 24px 60px rgba(0, 0, 0, 0.58); /* 含义：SWOT 卡片阴影；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-card-blur: blur(12px); /* 含义：SWOT 卡片模糊；设置：在 themeTokens 中覆盖或改此默认值 */
@@ -3512,18 +3417,18 @@ class HTMLRenderer:
   --swot-cell-threat-border: rgba(179,107,22,0.68); /* 含义：SWOT 威胁边框；设置：在 themeTokens 中覆盖或改此默认值 */
   --swot-item-border: rgba(255,255,255,0.14); /* 含义：SWOT 条目边框；设置：在 themeTokens 中覆盖或改此默认值 */
   /* PEST 分析变量 - 暗色模式 */
-  --pest-political: #a569bd; /* 含义：PEST 政治维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-economic: #48c9b0; /* 含义：PEST 经济维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-social: #f06292; /* 含义：PEST 社会维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-technological: #5dade2; /* 含义：PEST 技术维度主色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-on-light: #1a1a2e; /* 含义：PEST 亮底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-on-dark: #f0f4ff; /* 含义：PEST 暗底文字色；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-text: #f0f4ff; /* 含义：PEST 文本主色；设置：在 themeTokens 中覆盖或改此默认值 */
+  --pest-political: # a569bd; /* Meaning: PEST political dimension main color; setting: override or change this default value in themeTokens */
+  --pest-economic: # 48c9b0; /* Meaning: PEST economic dimension main color; setting: override or change this default value in themeTokens */
+  --pest-social: # f06292; /* Meaning: PEST social dimension main color; setting: override or change this default value in themeTokens */
+  --pest-technological: # 5dade2; /* Meaning: Main color of PEST technical dimension; Setting: Override or change this default value in themeTokens */
+  --pest-on-light: # 1a1a2e; /* Meaning: PEST bright text color; setting: override or change this default value in themeTokens */
+  --pest-on-dark: # f0f4ff; /* Meaning: PEST dark text color; setting: override or change this default value in themeTokens */
+  --pest-text: # f0f4ff; /* Meaning: PEST text main color; setting: override or change this default value in themeTokens */
   --pest-muted: rgba(240,244,255,0.7); /* 含义：PEST 次文本色；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-surface: rgba(255,255,255,0.06); /* 含义：PEST 卡片表面色；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-chip-bg: rgba(255,255,255,0.12); /* 含义：PEST 标签底色；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-tag-border: rgba(255,255,255,0.22); /* 含义：PEST 标签边框；设置：在 themeTokens 中覆盖或改此默认值 */
-  --pest-card-bg: radial-gradient(130% 130% at 15% 15%, rgba(165,105,189,0.16), transparent 50%), radial-gradient(110% 130% at 85% 5%, rgba(72,201,176,0.14), transparent 48%), linear-gradient(155deg, #12162a 0%, #161b30 50%, #0f1425 100%); /* 含义：PEST 卡片背景渐变；设置：在 themeTokens 中覆盖或改此默认值 */
+  --pest-card-bg: radial-gradient(130% 130% at 15% 15%, rgba(165,105,189,0.16), transparent 50%), radial-gradient(110% 130% at 85% 5%, rgba(72,201,176,0.14), transparent 48%), linear-gradient(155deg, # 12162a 0%, #161b30 50%, #0f1425 100%); /* Meaning: PEST card background gradient; setting: override or change this default value in themeTokens */
   --pest-card-border: rgba(255,255,255,0.12); /* 含义：PEST 卡片边框；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-card-shadow: 0 28px 65px rgba(0, 0, 0, 0.55); /* 含义：PEST 卡片阴影；设置：在 themeTokens 中覆盖或改此默认值 */
   --pest-card-blur: blur(10px); /* 含义：PEST 卡片模糊；设置：在 themeTokens 中覆盖或改此默认值 */
@@ -3673,7 +3578,7 @@ body {{ /* 含义：全局排版与背景设置；设置：在本块内调整相
   max-height: 240px; /* 含义：max-height 样式属性；设置：按需调整数值/颜色/变量 */
   overflow: auto; /* 含义：溢出处理；设置：按需调整数值/颜色/变量 */
   background: rgba(0,0,0,0.85); /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #fff; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # fff; /* Meaning: text color; setting: adjust value/color/variable as needed */
   font-size: 0.85rem; /* 含义：字号；设置：按需调整数值/颜色/变量 */
   padding: 12px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   border-radius: 10px; /* 含义：圆角；设置：按需调整数值/颜色/变量 */
@@ -3728,7 +3633,7 @@ theme-button {{ /* 含义：主题切换组件；设置：在本块内调整相�
   border: none; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
   border-radius: 10px; /* 含义：圆角；设置：按需调整数值/颜色/变量 */
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #fff; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # fff; /* Meaning: text color; setting: adjust value/color/variable as needed */
   padding: 11px 22px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   cursor: pointer; /* 含义：鼠标指针样式；设置：按需调整数值/颜色/变量 */
   font-size: 0.92rem; /* 含义：字号；设置：按需调整数值/颜色/变量 */
@@ -3795,12 +3700,12 @@ theme-button {{ /* 含义：主题切换组件；设置：在本块内调整相�
   transition: transform 0.3s ease, opacity 0.3s ease; /* 含义：过渡动画时长/属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .theme-toggle-btn 图标 */
 .theme-toggle-btn .sun-icon {{ /* 含义：太阳图标样式；设置：在本块内调整相关属性 */
-  color: #F59E0B; /* 含义：太阳图标颜色；设置：按需调整数值/颜色/变量 */
-  stroke: #F59E0B; /* 含义：太阳图标描边颜色；设置：按需调整数值/颜色/变量 */
+  color: # F59E0B; /* Meaning: sun icon color; settings: adjust value/color/variable as needed */
+  stroke: # F59E0B; /* Meaning: Sun icon stroke color; Settings: Adjust value/color/variable as needed */
 }} /* 结束 .theme-toggle-btn .sun-icon */
 .theme-toggle-btn .moon-icon {{ /* 含义：月亮图标样式；设置：在本块内调整相关属性 */
-  color: #6366F1; /* 含义：月亮图标颜色；设置：按需调整数值/颜色/变量 */
-  stroke: #6366F1; /* 含义：月亮图标描边颜色；设置：按需调整数值/颜色/变量 */
+  color: # 6366F1; /* Meaning: Moon icon color; Settings: Adjust value/color/variable as needed */
+  stroke: # 6366F1; /* Meaning: moon icon stroke color; settings: adjust value/color/variable as needed */
 }} /* 结束 .theme-toggle-btn .moon-icon */
 .theme-toggle-btn:hover .sun-icon {{ /* 含义：悬停时太阳图标效果；设置：在本块内调整相关属性 */
   transform: rotate(15deg); /* 含义：旋转变换；设置：按需调整数值/颜色/变量 */
@@ -3832,7 +3737,7 @@ body.exporting {{ /* 含义：body.exporting 样式区域；设置：在本块�
   background: rgba(12, 19, 38, 0.92); /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
   padding: 24px 32px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   border-radius: 18px; /* 含义：圆角；设置：按需调整数值/颜色/变量 */
-  color: #fff; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # fff; /* Meaning: text color; setting: adjust value/color/variable as needed */
   text-align: center; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
   min-width: 280px; /* 含义：最小宽度；设置：按需调整数值/颜色/变量 */
   box-shadow: 0 16px 40px rgba(0,0,0,0.45); /* 含义：阴影效果；设置：按需调整数值/颜色/变量 */
@@ -4297,12 +4202,12 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   color: var(--text-color); /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .swot-pdf-caption */
 .swot-pdf-thead th {{ /* 含义：.swot-pdf-thead th 样式区域；设置：在本块内调整相关属性 */
-  background: #f8f9fa; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
+  background: # f8f9fa; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
   padding: 10px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   text-align: left; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
   font-weight: 600; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #dee2e6; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
-  color: #495057; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # dee2e6; /* Meaning: border style; settings: adjust values/colors/variables as needed */
+  color: # 495057; /* Meaning: text color; settings: adjust value/color/variable as needed */
 }} /* 结束 .swot-pdf-thead th */
 .swot-pdf-th-quadrant {{ width: 80px; }} /* 含义：.swot-pdf-th-quadrant  width 样式属性；设置：按需调整数值/颜色/变量 */
 .swot-pdf-th-num {{ width: 50px; text-align: center; }} /* 含义：.swot-pdf-th-num  width 样式属性；设置：按需调整数值/颜色/变量 */
@@ -4311,10 +4216,10 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
 .swot-pdf-th-tags {{ width: 100px; text-align: center; }} /* 含义：.swot-pdf-th-tags  width 样式属性；设置：按需调整数值/颜色/变量 */
 .swot-pdf-summary {{ /* 含义：.swot-pdf-summary 样式区域；设置：在本块内调整相关属性 */
   padding: 12px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
-  background: #f8f9fa; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #666; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  background: # f8f9fa; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
+  color: # 666; /* Meaning: text color; setting: adjust value/color/variable as needed */
   font-style: italic; /* 含义：font-style 样式属性；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #dee2e6; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # dee2e6; /* Meaning: border style; settings: adjust values/colors/variables as needed */
 }} /* 结束 .swot-pdf-summary */
 .swot-pdf-quadrant {{ /* 含义：.swot-pdf-quadrant 样式区域；设置：在本块内调整相关属性 */
   break-inside: avoid; /* 含义：break-inside 样式属性；设置：按需调整数值/颜色/变量 */
@@ -4325,13 +4230,13 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   vertical-align: middle; /* 含义：vertical-align 样式属性；设置：按需调整数值/颜色/变量 */
   padding: 12px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   font-weight: 700; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #dee2e6; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # dee2e6; /* Meaning: border style; settings: adjust values/colors/variables as needed */
   writing-mode: horizontal-tb; /* 含义：writing-mode 样式属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .swot-pdf-quadrant-label */
-.swot-pdf-quadrant-label.swot-pdf-strength {{ background: rgba(28,127,110,0.15); color: #1c7f6e; border-left: 4px solid #1c7f6e; }} /* 含义：.swot-pdf-quadrant-label.swot-pdf-strength  background 样式属性；设置：按需调整数值/颜色/变量 */
-.swot-pdf-quadrant-label.swot-pdf-weakness {{ background: rgba(192,57,43,0.12); color: #c0392b; border-left: 4px solid #c0392b; }} /* 含义：.swot-pdf-quadrant-label.swot-pdf-weakness  background 样式属性；设置：按需调整数值/颜色/变量 */
-.swot-pdf-quadrant-label.swot-pdf-opportunity {{ background: rgba(31,90,179,0.12); color: #1f5ab3; border-left: 4px solid #1f5ab3; }} /* 含义：.swot-pdf-quadrant-label.swot-pdf-opportunity  background 样式属性；设置：按需调整数值/颜色/变量 */
-.swot-pdf-quadrant-label.swot-pdf-threat {{ background: rgba(179,107,22,0.12); color: #b36b16; border-left: 4px solid #b36b16; }} /* 含义：.swot-pdf-quadrant-label.swot-pdf-threat  background 样式属性；设置：按需调整数值/颜色/变量 */
+.swot-pdf-quadrant-label.swot-pdf-strength {{ background: rgba(28,127,110,0.15); color: # 1c7f6e; border-left: 4px solid #1c7f6e; }} /* Meaning: .swot-pdf-quadrant-label.swot-pdf-strength background style attribute; setting: adjust value/color/variable as needed */
+.swot-pdf-quadrant-label.swot-pdf-weakness {{ background: rgba(192,57,43,0.12); color: # c0392b; border-left: 4px solid #c0392b; }} /* Meaning: .swot-pdf-quadrant-label.swot-pdf-weakness background style attribute; setting: adjust value/color/variable as needed */
+.swot-pdf-quadrant-label.swot-pdf-opportunity {{ background: rgba(31,90,179,0.12); color: # 1f5ab3; border-left: 4px solid #1f5ab3; }} /* Meaning: .swot-pdf-quadrant-label.swot-pdf-opportunity background style attribute; setting: adjust value/color/variable as needed */
+.swot-pdf-quadrant-label.swot-pdf-threat {{ background: rgba(179,107,22,0.12); color: # b36b16; border-left: 4px solid #b36b16; }} /* Meaning: .swot-pdf-quadrant-label.swot-pdf-threat background style attribute; setting: adjust value/color/variable as needed */
 .swot-pdf-code {{ /* 含义：.swot-pdf-code 样式区域；设置：在本块内调整相关属性 */
   display: block; /* 含义：布局展示方式；设置：按需调整数值/颜色/变量 */
   font-size: 1.5rem; /* 含义：字号；设置：按需调整数值/颜色/变量 */
@@ -4346,7 +4251,7 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
 }} /* 结束 .swot-pdf-label-text */
 .swot-pdf-item-row td {{ /* 含义：.swot-pdf-item-row td 样式区域；设置：在本块内调整相关属性 */
   padding: 10px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #dee2e6; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # dee2e6; /* Meaning: border style; settings: adjust values/colors/variables as needed */
   vertical-align: top; /* 含义：vertical-align 样式属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .swot-pdf-item-row td */
 .swot-pdf-item-row.swot-pdf-strength td {{ background: rgba(28,127,110,0.03); }} /* 含义：.swot-pdf-item-row.swot-pdf-strength td  background 样式属性；设置：按需调整数值/颜色/变量 */
@@ -4356,14 +4261,14 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
 .swot-pdf-item-num {{ /* 含义：.swot-pdf-item-num 样式区域；设置：在本块内调整相关属性 */
   text-align: center; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
   font-weight: 600; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  color: #6c757d; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # 6c757d; /* Meaning: text color; settings: adjust values/colors/variables as needed */
 }} /* 结束 .swot-pdf-item-num */
 .swot-pdf-item-title {{ /* 含义：.swot-pdf-item-title 样式区域；设置：在本块内调整相关属性 */
   font-weight: 600; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  color: #212529; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # 212529; /* Meaning: text color; settings: adjust values/colors/variables as needed */
 }} /* 结束 .swot-pdf-item-title */
 .swot-pdf-item-detail {{ /* 含义：.swot-pdf-item-detail 样式区域；设置：在本块内调整相关属性 */
-  color: #495057; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # 495057; /* Meaning: text color; settings: adjust value/color/variable as needed */
   line-height: 1.5; /* 含义：行高，提升可读性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .swot-pdf-item-detail */
 .swot-pdf-item-tags {{ /* 含义：.swot-pdf-item-tags 样式区域；设置：在本块内调整相关属性 */
@@ -4374,17 +4279,17 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   padding: 3px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   border-radius: 4px; /* 含义：圆角；设置：按需调整数值/颜色/变量 */
   font-size: 0.75rem; /* 含义：字号；设置：按需调整数值/颜色/变量 */
-  background: #e9ecef; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #495057; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  background: # e9ecef; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
+  color: # 495057; /* Meaning: text color; settings: adjust value/color/variable as needed */
   margin: 2px; /* 含义：外边距，控制与周围元素的距离；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .swot-pdf-tag */
 .swot-pdf-tag--score {{ /* 含义：.swot-pdf-tag--score 样式区域；设置：在本块内调整相关属性 */
-  background: #fff3cd; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #856404; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  background: # fff3cd; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
+  color: # 856404; /* Meaning: text color; settings: adjust value/color/variable as needed */
 }} /* 结束 .swot-pdf-tag--score */
 .swot-pdf-empty {{ /* 含义：.swot-pdf-empty 样式区域；设置：在本块内调整相关属性 */
   text-align: center; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
-  color: #adb5bd; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # adb5bd; /* Meaning: text color; settings: adjust values/colors/variables as needed */
   font-style: italic; /* 含义：font-style 样式属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .swot-pdf-empty */
 
@@ -4604,12 +4509,12 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   color: var(--text-color); /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .pest-pdf-caption */
 .pest-pdf-thead th {{ /* 含义：.pest-pdf-thead th 样式区域；设置：在本块内调整相关属性 */
-  background: #f5f3f7; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
+  background: # f5f3f7; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
   padding: 10px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   text-align: left; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
   font-weight: 600; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #e0dce3; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
-  color: #4a4458; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # e0dce3; /* Meaning: border style; settings: adjust values/colors/variables as needed */
+  color: # 4a4458; /* Meaning: text color; settings: adjust values/colors/variables as needed */
 }} /* 结束 .pest-pdf-thead th */
 .pest-pdf-th-dimension {{ width: 85px; }} /* 含义：.pest-pdf-th-dimension  width 样式属性；设置：按需调整数值/颜色/变量 */
 .pest-pdf-th-num {{ width: 50px; text-align: center; }} /* 含义：.pest-pdf-th-num  width 样式属性；设置：按需调整数值/颜色/变量 */
@@ -4618,10 +4523,10 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
 .pest-pdf-th-tags {{ width: 100px; text-align: center; }} /* 含义：.pest-pdf-th-tags  width 样式属性；设置：按需调整数值/颜色/变量 */
 .pest-pdf-summary {{ /* 含义：.pest-pdf-summary 样式区域；设置：在本块内调整相关属性 */
   padding: 12px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
-  background: #f8f6fa; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #666; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  background: # f8f6fa; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
+  color: # 666; /* Meaning: text color; setting: adjust value/color/variable as needed */
   font-style: italic; /* 含义：font-style 样式属性；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #e0dce3; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # e0dce3; /* Meaning: border style; settings: adjust values/colors/variables as needed */
 }} /* 结束 .pest-pdf-summary */
 .pest-pdf-dimension {{ /* 含义：.pest-pdf-dimension 样式区域；设置：在本块内调整相关属性 */
   break-inside: avoid; /* 含义：break-inside 样式属性；设置：按需调整数值/颜色/变量 */
@@ -4632,13 +4537,13 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   vertical-align: middle; /* 含义：vertical-align 样式属性；设置：按需调整数值/颜色/变量 */
   padding: 12px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   font-weight: 700; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #e0dce3; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # e0dce3; /* Meaning: border style; settings: adjust values/colors/variables as needed */
   writing-mode: horizontal-tb; /* 含义：writing-mode 样式属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .pest-pdf-dimension-label */
-.pest-pdf-dimension-label.pest-pdf-political {{ background: rgba(142,68,173,0.12); color: #8e44ad; border-left: 4px solid #8e44ad; }} /* 含义：.pest-pdf-dimension-label.pest-pdf-political  background 样式属性；设置：按需调整数值/颜色/变量 */
-.pest-pdf-dimension-label.pest-pdf-economic {{ background: rgba(22,160,133,0.12); color: #16a085; border-left: 4px solid #16a085; }} /* 含义：.pest-pdf-dimension-label.pest-pdf-economic  background 样式属性；设置：按需调整数值/颜色/变量 */
-.pest-pdf-dimension-label.pest-pdf-social {{ background: rgba(232,67,147,0.12); color: #e84393; border-left: 4px solid #e84393; }} /* 含义：.pest-pdf-dimension-label.pest-pdf-social  background 样式属性；设置：按需调整数值/颜色/变量 */
-.pest-pdf-dimension-label.pest-pdf-technological {{ background: rgba(41,128,185,0.12); color: #2980b9; border-left: 4px solid #2980b9; }} /* 含义：.pest-pdf-dimension-label.pest-pdf-technological  background 样式属性；设置：按需调整数值/颜色/变量 */
+.pest-pdf-dimension-label.pest-pdf-political {{ background: rgba(142,68,173,0.12); color: # 8e44ad; border-left: 4px solid #8e44ad; }} /* Meaning: .pest-pdf-dimension-label.pest-pdf-political background style attribute; setting: adjust value/color/variable as needed */
+.pest-pdf-dimension-label.pest-pdf-economic {{ background: rgba(22,160,133,0.12); color: # 16a085; border-left: 4px solid #16a085; }} /* Meaning: .pest-pdf-dimension-label.pest-pdf-economic background style attribute; setting: adjust value/color/variable as needed */
+.pest-pdf-dimension-label.pest-pdf-social {{ background: rgba(232,67,147,0.12); color: # e84393; border-left: 4px solid #e84393; }} /* Meaning: .pest-pdf-dimension-label.pest-pdf-social background style attribute; setting: adjust value/color/variable as needed */
+.pest-pdf-dimension-label.pest-pdf-technological {{ background: rgba(41,128,185,0.12); color: # 2980b9; border-left: 4px solid #2980b9; }} /* Meaning: .pest-pdf-dimension-label.pest-pdf-technological background style attribute; setting: adjust value/color/variable as needed */
 .pest-pdf-code {{ /* 含义：.pest-pdf-code 样式区域；设置：在本块内调整相关属性 */
   display: block; /* 含义：布局展示方式；设置：按需调整数值/颜色/变量 */
   font-size: 1.5rem; /* 含义：字号；设置：按需调整数值/颜色/变量 */
@@ -4653,7 +4558,7 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
 }} /* 结束 .pest-pdf-label-text */
 .pest-pdf-item-row td {{ /* 含义：.pest-pdf-item-row td 样式区域；设置：在本块内调整相关属性 */
   padding: 10px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
-  border: 1px solid #e0dce3; /* 含义：边框样式；设置：按需调整数值/颜色/变量 */
+  border: 1px solid # e0dce3; /* Meaning: border style; settings: adjust values/colors/variables as needed */
   vertical-align: top; /* 含义：vertical-align 样式属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .pest-pdf-item-row td */
 .pest-pdf-item-row.pest-pdf-political td {{ background: rgba(142,68,173,0.03); }} /* 含义：.pest-pdf-item-row.pest-pdf-political td  background 样式属性；设置：按需调整数值/颜色/变量 */
@@ -4663,14 +4568,14 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
 .pest-pdf-item-num {{ /* 含义：.pest-pdf-item-num 样式区域；设置：在本块内调整相关属性 */
   text-align: center; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
   font-weight: 600; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  color: #6c757d; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # 6c757d; /* Meaning: text color; settings: adjust values/colors/variables as needed */
 }} /* 结束 .pest-pdf-item-num */
 .pest-pdf-item-title {{ /* 含义：.pest-pdf-item-title 样式区域；设置：在本块内调整相关属性 */
   font-weight: 600; /* 含义：字重；设置：按需调整数值/颜色/变量 */
-  color: #212529; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # 212529; /* Meaning: text color; settings: adjust values/colors/variables as needed */
 }} /* 结束 .pest-pdf-item-title */
 .pest-pdf-item-detail {{ /* 含义：.pest-pdf-item-detail 样式区域；设置：在本块内调整相关属性 */
-  color: #495057; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # 495057; /* Meaning: text color; settings: adjust value/color/variable as needed */
   line-height: 1.5; /* 含义：行高，提升可读性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .pest-pdf-item-detail */
 .pest-pdf-item-tags {{ /* 含义：.pest-pdf-item-tags 样式区域；设置：在本块内调整相关属性 */
@@ -4681,13 +4586,13 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   padding: 3px 8px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   border-radius: 4px; /* 含义：圆角；设置：按需调整数值/颜色/变量 */
   font-size: 0.75rem; /* 含义：字号；设置：按需调整数值/颜色/变量 */
-  background: #ece9f1; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #5a4f6a; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  background: # ece9f1; /* Meaning: background color or gradient effect; settings: adjust values/colors/variables as needed */
+  color: # 5a4f6a; /* Meaning: text color; settings: adjust value/color/variable as needed */
   margin: 2px; /* 含义：外边距，控制与周围元素的距离；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .pest-pdf-tag */
 .pest-pdf-empty {{ /* 含义：.pest-pdf-empty 样式区域；设置：在本块内调整相关属性 */
   text-align: center; /* 含义：文本对齐；设置：按需调整数值/颜色/变量 */
-  color: #adb5bd; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  color: # adb5bd; /* Meaning: text color; settings: adjust values/colors/variables as needed */
   font-style: italic; /* 含义：font-style 样式属性；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .pest-pdf-empty */
 
@@ -4717,9 +4622,9 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   background: rgba(0,0,0,0.02); /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
   border-left: none; /* 含义：移除左侧色条；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .callout */
-.callout.tone-warning {{ border-color: #ff9800; }} /* 含义：.callout.tone-warning  border-color 样式属性；设置：按需调整数值/颜色/变量 */
-.callout.tone-success {{ border-color: #2ecc71; }} /* 含义：.callout.tone-success  border-color 样式属性；设置：按需调整数值/颜色/变量 */
-.callout.tone-danger {{ border-color: #e74c3c; }} /* 含义：.callout.tone-danger  border-color 样式属性；设置：按需调整数值/颜色/变量 */
+.callout.tone-warning {{ border-color: # ff9800; }} /* Meaning: .callout.tone-warning border-color style attribute; setting: adjust value/color/variable as needed */
+.callout.tone-success {{ border-color: # 2ecc71; }} /* Meaning: .callout.tone-success border-color style attribute; setting: adjust value/color/variable as needed */
+.callout.tone-danger {{ border-color: # e74c3c; }} /* Meaning: .callout.tone-danger border-color style attribute; setting: adjust value/color/variable as needed */
 /* ==================== Callout 液态玻璃效果 - 仅屏幕显示 ==================== */
 @media screen {{
   .callout {{ /* 含义：高亮提示框液态玻璃 - 透明悬浮设计；设置：在本块内调整相关属性 */
@@ -4765,19 +4670,19 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   }} /* 结束 .callout::after */
   /* Callout tone 变体 - 不同颜色发光 */
   .callout.tone-info {{ /* 含义：信息类型 callout；设置：在本块内调整相关属性 */
-    --callout-accent: #3b82f6; /* 含义：信息蓝色调；设置：按需调整数值/颜色/变量 */
+    --callout-accent: # 3b82f6; /* Meaning: Information blue tone; Settings: Adjust values/colors/variables as needed */
     --callout-glow-color: rgba(59, 130, 246, 0.4); /* 含义：信息蓝发光；设置：按需调整数值/颜色/变量 */
   }} /* 结束 .callout.tone-info */
   .callout.tone-warning {{ /* 含义：警告类型 callout；设置：在本块内调整相关属性 */
-    --callout-accent: #f59e0b; /* 含义：警告橙色调；设置：按需调整数值/颜色/变量 */
+    --callout-accent: # f59e0b; /* Meaning: Warning orange tone; Settings: Adjust values/colors/variables as needed */
     --callout-glow-color: rgba(245, 158, 11, 0.4); /* 含义：警告橙发光；设置：按需调整数值/颜色/变量 */
   }} /* 结束 .callout.tone-warning */
   .callout.tone-success {{ /* 含义：成功类型 callout；设置：在本块内调整相关属性 */
-    --callout-accent: #10b981; /* 含义：成功绿色调；设置：按需调整数值/颜色/变量 */
+    --callout-accent: # 10b981; /* Meaning: Successful green tone; Settings: Adjust values/colors/variables as needed */
     --callout-glow-color: rgba(16, 185, 129, 0.4); /* 含义：成功绿发光；设置：按需调整数值/颜色/变量 */
   }} /* 结束 .callout.tone-success */
   .callout.tone-danger {{ /* 含义：危险类型 callout；设置：在本块内调整相关属性 */
-    --callout-accent: #ef4444; /* 含义：危险红色调；设置：按需调整数值/颜色/变量 */
+    --callout-accent: # ef4444; /* Meaning: Dangerous red tone; Settings: Adjust values/colors/variables as needed */
     --callout-glow-color: rgba(239, 68, 68, 0.4); /* 含义：危险红发光；设置：按需调整数值/颜色/变量 */
   }} /* 结束 .callout.tone-danger */
   /* 暗色模式 callout 液态玻璃 */
@@ -4851,8 +4756,8 @@ table th {{ /* 含义：table th 样式区域；设置：在本块内调整相�
   overflow-wrap: break-word; /* 含义：长单词换行；设置：按需调整数值/颜色/变量 */
   max-width: 100%; /* 含义：最大宽度；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .kpi-label */
-.delta.up {{ color: #27ae60; }} /* 含义：.delta.up  color 样式属性；设置：按需调整数值/颜色/变量 */
-.delta.down {{ color: #e74c3c; }} /* 含义：.delta.down  color 样式属性；设置：按需调整数值/颜色/变量 */
+.delta.up {{ color: # 27ae60; }} /* Meaning: .delta.up color style attribute; setting: adjust value/color/variable as needed */
+.delta.down {{ color: # e74c3c; }} /* Meaning: .delta.down color style attribute; setting: adjust value/color/variable as needed */
 .delta.neutral {{ color: var(--secondary-color); }} /* 含义：.delta.neutral  color 样式属性；设置：按需调整数值/颜色/变量 */
 .delta {{ /* 含义：.delta 样式区域；设置：在本块内调整相关属性 */
   display: block; /* 含义：布局展示方式；设置：按需调整数值/颜色/变量 */
@@ -4993,8 +4898,8 @@ figure img {{ /* 含义：figure img 样式区域；设置：在本块内调整�
   padding: 0 0.15em; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
 }} /* 结束 .math-inline */
 pre.code-block {{ /* 含义：代码块；设置：在本块内调整相关属性 */
-  background: #1e1e1e; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
-  color: #fff; /* 含义：文字颜色；设置：按需调整数值/颜色/变量 */
+  background: # 1e1e1e; /* Meaning: background color or gradient effect; settings: adjust value/color/variable as needed */
+  color: # fff; /* Meaning: text color; setting: adjust value/color/variable as needed */
   padding: 16px; /* 含义：内边距，控制内容与容器边缘的距离；设置：按需调整数值/颜色/变量 */
   border-radius: 12px; /* 含义：圆角；设置：按需调整数值/颜色/变量 */
   overflow-x: auto; /* 含义：横向溢出处理；设置：按需调整数值/颜色/变量 */
@@ -5012,7 +4917,7 @@ pre.code-block {{ /* 含义：代码块；设置：在本块内调整相关属�
 @media print {{ /* 含义：打印模式样式；设置：在本块内调整相关属性 */
   .no-print {{ display: none !important; }} /* 含义：.no-print  display 样式属性；设置：按需调整数值/颜色/变量 */
   body {{ /* 含义：全局排版与背景设置；设置：在本块内调整相关属性 */
-    background: #fff; /* 含义：背景色或渐变效果；设置：按需调整数值/颜色/变量 */
+    background: # fff; /* Meaning: background color or gradient effect; setting: adjust value/color/variable as needed */
   }} /* 结束 body */
   main {{ /* 含义：主体内容容器；设置：在本块内调整相关属性 */
     box-shadow: none; /* 含义：阴影效果；设置：按需调整数值/颜色/变量 */
@@ -5149,11 +5054,11 @@ img, canvas, svg {{ /* 含义：媒体元素尺寸限制；设置：在本块内
         返回页面底部的JS，负责 Chart.js 注水、词云渲染及按钮交互。
 
         交互层级梳理：
-        1) 主题切换（#theme-toggle）：监听自定义组件 change 事件，detail 为 'light'/'dark'，
+        1) 主题切换（# theme-toggle): Listen to the change event of the custom component, the detail is 'light'/'dark',
            作用：切换 body.dark-mode、刷新 Chart.js 与词云颜色。
-        2) 打印按钮（#print-btn）：触发 window.print()，受 CSS @media print 控制版式。
-        3) 导出按钮（#export-btn）：调用 exportPdf()，内部使用 html2canvas + jsPDF，
-           并显示 #export-overlay（遮罩、状态文案、进度条）。
+        2) 打印按钮（# print-btn): triggers window.print(), controlled by CSS @media print.
+        3) 导出按钮（# export-btn): Call exportPdf(), internally use html2canvas + jsPDF,
+           并显示 # export-overlay (mask, status copy, progress bar).
         4) 图表注水：扫描所有 data-config-id 的 canvas，解析相邻 JSON，实例化 Chart.js；
            失败时降级为表格/词云徽章展示，并在卡片上标记 data-chart-state。
         5) 窗口 resize：debounce 后重绘词云，确保响应式。

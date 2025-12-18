@@ -1,9 +1,8 @@
-"""
-Markdown模板切片工具。
+"""Markdown template slicing tool.
 
-LLM需要“按章调用”，因此必须把Markdown模板解析为结构化章节队列。
-这里通过轻量正则和缩进启发式，兼容“# 标题”与
-“- **1.0 标题** /   - 1.1 子标题”等多种写法。
+LLM needs to be "called by chapter", so the Markdown template must be parsed into a structured chapter queue.
+Here, through lightweight regularity and indentation heuristics, "# title" is compatible with
+"- **1.0 title** / - 1.1 subtitle" and other writing methods."种写法。
 """
 
 from __future__ import annotations
@@ -18,12 +17,10 @@ SECTION_ORDER_STEP = 10
 
 @dataclass
 class TemplateSection:
-    """
-    模板章节实体。
+    """Template chapter entity.
 
-    记录标题、slug、序号、层级、原始标题、章节编号与提纲，
-    方便后续节点在提示词中引用并保持锚点一致。
-    """
+    Record the title, slug, serial number, hierarchy, original title, chapter number and outline,
+    It is convenient for subsequent nodes to be referenced in prompt words and to keep the anchor points consistent."""
 
     title: str
     slug: str
@@ -35,11 +32,9 @@ class TemplateSection:
     outline: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        """
-        将章节实体序列化为字典。
+        """Serialize chapter entities into a dictionary.
 
-        该结构广泛用于提示词上下文以及 layout/word budget 节点的输入。
-        """
+        This structure is widely used to prompt word context and as input to layout/word budget nodes."""
         return {
             "title": self.title,
             "slug": self.slug,
@@ -51,21 +46,19 @@ class TemplateSection:
         }
 
 
-# 解析表达式刻意避免使用 `.*`，以保持匹配的确定性，
-# 并规避不可信模板文本中常见的正则DoS风险。
+# Parsing expressions deliberately avoid using `.*` to maintain the certainty of matching.
+# And avoid common regular DoS risks in untrusted template text.
 heading_pattern = re.compile(
-    r"""
-    (?P<marker>\#{1,6})       # Markdown标题标记
-    [ \t]+                    # 必需的空白字符
-    (?P<title>[^\r\n]+)       # 不包含换行的标题文本
+    r"""(?P<marker>\#{1,6}) # Markdown title mark
+    [ \t]+ # Required whitespace characters
+    (?P<title>[^\r\n]+) # Title text without line breaks"      # Title text without line breaks
     """,
     re.VERBOSE,
 )
 bullet_pattern = re.compile(
-    r"""
-    (?P<marker>[-*+])         # 列表项目符号
-    [ \t]+
-    (?P<title>[^\r\n]+)
+    r"""(?P<marker>[-*+]) # list bullets
+    [\t]+
+    (?P<title>[^\r\n]+)"
     """,
     re.VERBOSE,
 )
@@ -85,16 +78,17 @@ number_pattern = re.compile(
 
 
 def parse_template_sections(template_md: str) -> List[TemplateSection]:
-    """
-    将Markdown模板切分成章节列表（按大标题）。
+    """Divide the Markdown template into a list of chapters (by large title).
 
-    返回的每个TemplateSection都携带slug/order/章节号，
-    方便后续分章调用与锚点生成。解析时会同时兼容
-    “# 标题”“无符号编号”“列表提纲”等不同写法。
+    Each TemplateSection returned carries the slug/order/chapter number,
+    This facilitates subsequent chapter calling and anchor point generation. Will be compatible at the same time when parsing
+    "# title", "unsigned number", "list outline" and other different writing methods.
 
-    参数:
-        template_md: 模板Markdown全文。
+    Parameters:
+        template_md: Full text of template Markdown.
 
+    Return:
+        list[TemplateSection]: Structured sequence of sections."
     返回:
         list[TemplateSection]: 结构化的章节序列。
     """
@@ -130,31 +124,29 @@ def parse_template_sections(template_md: str) -> List[TemplateSection]:
             order += SECTION_ORDER_STEP
             continue
 
-        # 提纲条目
+        # outline items
         if current:
             current.outline.append(meta["title"])
 
     for idx, section in enumerate(sections, start=1):
-        # 为每个章节生成稳定的chapter_id，便于后续引用
+        # Generate a stable chapter_id for each chapter to facilitate subsequent reference
         section.chapter_id = f"S{idx}"
 
     return sections
 
 
 def _classify_line(stripped: str, indent: int) -> Optional[dict]:
-    """
-    根据缩进与符号分类行。
+    """Sort lines based on indentation and symbols.
 
-    借助正则判断当前行是章节标题、提纲还是普通列表项，
-    并衍生 depth/slug/number 等派生信息。
+    Use regular rules to determine whether the current line is a chapter title, outline, or an ordinary list item.
+    And derive derived information such as depth/slug/number.
 
-    参数:
-        stripped: 去除前后空格后的原始行。
-        indent: 行首空格数量，用于区分层级。
+    Parameters:
+        stripped: The original line after removing leading and trailing spaces.
+        indent: The number of spaces at the beginning of the line, used to distinguish levels.
 
-    返回:
-        dict | None: 识别后的元数据；无法识别时返回None。
-    """
+    Return:
+        dict | None: Recognized metadata; returns None if unrecognized."""
 
     heading_match = heading_pattern.fullmatch(stripped)
     if heading_match:
@@ -187,7 +179,7 @@ def _classify_line(stripped: str, indent: int) -> Optional[dict]:
             "slug": slug,
         }
 
-    # 兼容“1.1 ...”没有前缀符号的行
+    # Compatible with "1.1..." lines without prefix symbols
     number_match = number_pattern.fullmatch(stripped)
     if number_match and number_match.group("label"):
         payload = stripped
@@ -210,25 +202,23 @@ def _classify_line(stripped: str, indent: int) -> Optional[dict]:
 
 
 def _strip_markup(text: str) -> str:
-    """去除包裹的**、__等强调标记，避免干扰标题匹配。"""
+    """Remove emphasis marks such as ** and __ from the package to avoid interfering with title matching."""
     if text.startswith(("**", "__")) and text.endswith(("**", "__")) and len(text) > 4:
         return text[2:-2].strip()
     return text
 
 
 def _split_number(payload: str) -> dict:
-    """
-    拆分编号与标题。
+    """Split numbers and titles.
 
-    例如 `1.2 市场趋势` 会被拆成 number=1.2、label=市场趋势，
-    并提供 display 用于回填标题。
+    For example, `1.2 market trend` will be split into number=1.2, label=market trend,
+    And provide display for backfilling the title.
 
-    参数:
-        payload: 原始标题字符串。
+    Parameters:
+        payload: Original title string.
 
-    返回:
-        dict: 包含 number/title/display。
-    """
+    Return:
+        dict: contains number/title/display."""
     match = number_pattern.fullmatch(payload)
     number = match.group("num") if match else ""
     label = match.group("label") if match else payload
@@ -243,16 +233,14 @@ def _split_number(payload: str) -> dict:
 
 
 def _build_slug(number: str, title: str) -> str:
-    """
-    根据编号/标题生成锚点，优先复用编号，缺失时对标题slug化。
+    """Generate anchor points based on the number/title, reuse the number first, and slug the title if missing.
 
-    参数:
-        number: 章节编号。
-        title: 标题文本。
+    Parameters:
+        number: Chapter number.
+        title: Title text.
 
-    返回:
-        str: 形如 `section-1-0` 的slug。
-    """
+    Return:
+        str: slug in the form of `section-1-0`."""
     if number:
         token = number.replace(".", "-")
     else:
@@ -262,11 +250,9 @@ def _build_slug(number: str, title: str) -> str:
 
 
 def _slugify_text(text: str) -> str:
-    """
-    对任意文本做降噪与转写，得到URL友好的slug片段。
+    """Denoise and transcribe any text to obtain URL-friendly slug fragments.
 
-    会规整大小写、移除特殊符号并保留汉字，确保锚点可读。
-    """
+    It will correct the case, remove special symbols and retain Chinese characters to ensure that the anchor point is readable."""
     text = unicodedata.normalize("NFKD", text)
     text = text.replace("·", "-").replace(" ", "-")
     text = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff-]+", "-", text)
@@ -275,18 +261,16 @@ def _slugify_text(text: str) -> str:
 
 
 def _ensure_unique_slug(slug: str, used: set) -> str:
-    """
-    若slug重复则自动追加序号，直到在used集合中唯一。
+    """If the slug is repeated, the serial number will be automatically appended until it is unique in the used collection.
 
-    通过 `-2/-3...` 的方式保证相同标题不会产生重复锚点。
+    Use `-2/-3...` to ensure that the same title will not generate duplicate anchors.
 
-    参数:
-        slug: 初始slug。
-        used: 已使用集合。
+    Parameters:
+        slug: initial slug.
+        used: The collection has been used.
 
-    返回:
-        str: 去重后的slug。
-    """
+    Return:
+        str: slug after deduplication."""
     if slug not in used:
         used.add(slug)
         return slug

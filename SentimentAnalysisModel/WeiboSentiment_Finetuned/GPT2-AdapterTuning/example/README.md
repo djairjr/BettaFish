@@ -1,11 +1,11 @@
-一种Adapter-tuning的实现方式，只提供的思路，具体可以视情况稍微修改。
+An implementation method of Adapter-tuning, which only provides the following ideas. The details can be slightly modified depending on the situation.
 
 
-这里补充一些模型层数：
-GPT-2 Small：12个GPT2Block，约有1.17亿个参数。
-GPT-2 Medium：24个GPT2Block，约有3.48亿个参数。
-GPT-2 Large：36个GPT2Block，约有7.55亿个参数。
-GPT-2 XL (也称为Extra Large)：48个GPT2Block，约有15.54亿个参数。
+Here are some additional model layers:
+GPT-2 Small: 12 GPT2Blocks, approximately 117 million parameters.
+GPT-2 Medium: 24 GPT2Blocks, approximately 348 million parameters.
+GPT-2 Large: 36 GPT2Blocks, approximately 755 million parameters.
+GPT-2 XL (also known as Extra Large): 48 GPT2Blocks, approximately 1.554 billion parameters.
 
-RoBERTa Base：12个RobertaLayer，总共约有1.25亿个参数。
-RoBERTa Large：24个RobertaLayer，总共约有3.55亿个参数。
+RoBERTa Base: 12 RobertaLayer, with a total of about 125 million parameters.
+RoBERTa Large: 24 RobertaLayer, with a total of about 355 million parameters.

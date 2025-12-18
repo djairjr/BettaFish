@@ -1,8 +1,6 @@
-"""
-Report Engine节点基类。
+"""Report Engine node base class.
 
-所有高阶推理节点都继承于此，统一日志、输入校验与状态变更接口。
-"""
+All high-order inference nodes inherit this, unified log, input verification and status change interface."""
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
@@ -11,97 +9,83 @@ from ..state.state import ReportState
 from loguru import logger
 
 class BaseNode(ABC):
-    """
-    节点基类。
+    """Node base class.
 
-    统一实现日志工具、输入/输出钩子以及LLM客户端依赖注入，
-    便于所有节点只专注业务逻辑。
-    """
+    Unified implementation of logging tools, input/output hooks and LLM client dependency injection,
+    It is convenient for all nodes to focus only on business logic."""
     
     def __init__(self, llm_client: LLMClient, node_name: str = ""):
-        """
-        初始化节点
+        """Initialize node
         
         Args:
-            llm_client: LLM客户端
-            node_name: 节点名称
+            llm_client: LLM client
+            node_name: node name
 
-        BaseNode 会保存节点名以便统一输出日志前缀。
-        """
+        BaseNode will save the node name to uniformly output log prefixes."""
         self.llm_client = llm_client
         self.node_name = node_name or self.__class__.__name__
     
     @abstractmethod
     def run(self, input_data: Any, **kwargs) -> Any:
-        """
-        执行节点处理逻辑
+        """Execute node processing logic
         
         Args:
-            input_data: 输入数据
-            **kwargs: 额外参数
+            input_data: input data
+            **kwargs: additional parameters
             
         Returns:
-            处理结果
-        """
+            Processing results"""
         pass
     
     def validate_input(self, input_data: Any) -> bool:
-        """
-        验证输入数据。
-        默认直接通过，子类可按需覆写实现字段检查。
+        """Validate input data.
+        By default, it is passed directly, and subclasses can override it as needed to implement field checking.
         
         Args:
-            input_data: 输入数据
+            input_data: input data
             
         Returns:
-            验证是否通过
-        """
+            Verification passed"""
         return True
     
     def process_output(self, output: Any) -> Any:
-        """
-        处理输出数据。
-        子类可覆写进行结构化或校验。
+        """Process the output data.
+        Subclasses can override for structuring or validation.
         
         Args:
-            output: 原始输出
+            output: raw output
             
         Returns:
-            处理后的输出
-        """
+            Processed output"""
         return output
     
     def log_info(self, message: str):
-        """记录信息日志，并自动带上节点名作为前缀。"""
+        """Record information logs and automatically prefix them with the node name."""
         formatted_message = f"[{self.node_name}] {message}"
         logger.info(formatted_message)
     
     def log_error(self, message: str):
-        """记录错误日志，便于排障。"""
+        """Record error logs to facilitate troubleshooting."""
         formatted_message = f"[{self.node_name}] {message}"
         logger.error(formatted_message)
 
 
 class StateMutationNode(BaseNode):
-    """
-    带状态修改功能的节点基类。
+    """Node base class with status modification function.
 
-    适用于节点需要直接写入 ReportState 的场景。
-    """
+    Suitable for scenarios where nodes need to write ReportState directly."""
     
     @abstractmethod
     def mutate_state(self, input_data: Any, state: ReportState, **kwargs) -> ReportState:
-        """
-        修改状态。
+        """Modify status.
 
-        子类需返回新的状态对象或在原地修改后回传，供流水线记录。
+        The subclass needs to return a new status object or modify it in place and then return it for pipeline recording.
         
         Args:
-            input_data: 输入数据
-            state: 当前状态
-            **kwargs: 额外参数
+            input_data: input data
+            state: current state
+            **kwargs: additional parameters
             
         Returns:
-            修改后的状态
-        """
+            modified status"""
         pass

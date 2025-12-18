@@ -1,98 +1,98 @@
-# 微调Qwen3小参数模型来完成情感分析任务
+# Fine-tune the Qwen3 small parameter model to complete the sentiment analysis task
 
-<img src="https://github.com/666ghj/Weibo_PublicOpinion_AnalysisSystem/blob/main/static/image/logo_Qweb3.jpg" alt="微博情感分析示例" width="25%" />
+<img src="https://github.com/666ghj/Weibo_PublicOpinion_AnalysisSystem/blob/main/static/image/logo_Qweb3.jpg" alt="Weibo sentiment analysis example" width="25%" />
 
-## 项目背景
+## Project background
 
-本文件夹专门用于基于阿里Qwen3系列模型的微博情感分析任务。根据最新的模型评测结果，Qwen3的小参数模型（0.6B、4B、8B）在话题识别、情感分析等相对简单的自然语言处理任务上表现优异，超越了传统的BERT等基础模型。
+This folder is specially used for Weibo sentiment analysis tasks based on Alibaba Qwen3 series models. According to the latest model evaluation results, Qwen3's small parameter models (0.6B, 4B, 8B) perform well on relatively simple natural language processing tasks such as topic recognition and sentiment analysis, surpassing traditional basic models such as BERT.
 
-qwen 0.6B模型加线性分类器，做特定领域的文本分类和序列标注，优于bert，也优于235B的qwen3 few shot learning。在算力有限的情况下，性价比很高...
+The qwen 0.6B model adds a linear classifier to perform text classification and sequence annotation in specific fields. It is better than bert and qwen3 few shot learning of 235B. With limited computing power, the price-performance ratio is very high...
 
-在经过了一些相关的调研之后，我觉的将Qwen3的一些小参数模型用在本系统中是一个不错的选择。
+After some related research, I think it is a good choice to use some small parameter models of Qwen3 in this system.
 
-虽然这个参数在LLM时代算小，但作为个人开发者计算资源有限，微调他们还是实属不易，在一张A100上训练了整整四天，求求star了
+Although these parameters are relatively small in the LLM era, as an individual developer with limited computing resources, it is still not easy to fine-tune them. It took four days of training on an A100. Please star.
 
-## 问题探究
+## Question exploration
 
-另外我也比较好奇一个问题：例如对于Qwen3-Embedding-0.6B跟Qwen3-0.6B这两个模型，前者我接一个分类头做情感二分类，后者我进行lora微调，在同样的数据集上训练，哪个的效果更好，各有什么优势？
+In addition, I am also curious about a question: For example, for the two models Qwen3-Embedding-0.6B and Qwen3-0.6B, for the former, I connected a classification head to do the second emotion classification, and for the latter, I performed lora fine-tuning and trained on the same data set. Which one has better effect and what are the advantages of each?
 
-**在绝大多数情况下，使用 Qwen3-0.6B 进行 LoRA 微调的效果会显著优于使用 Qwen3-Embedding-0.6B 外接分类头，但性能不如直接接分类头的。**
+**In most cases, the effect of using Qwen3-0.6B for LoRA fine-tuning will be significantly better than using the Qwen3-Embedding-0.6B external classification header, but the performance is not as good as directly connecting the classification header. **
 
-因此本模块对于所有参数的都提供**微调**与**嵌入再接分类头**两个版本，供大家取舍。
+Therefore, this module provides two versions of **fine-tuning** and **embedded and then connected to the classification header** for all parameters for everyone to choose.
 
-我们通过一个表格来清晰地展示两者的区别和优劣势：
+We use a table to clearly show the differences, advantages and disadvantages between the two:
 
-| 特性 / 维度       | 方法 A: `Qwen3-Embedding-0.6B` + 分类头                      | 方法 B: `Qwen3-0.6B` + LoRA 微调                             |
+| Features/Dimensions | Method A: `Qwen3-Embedding-0.6B` + classification header | Method B: `Qwen3-0.6B` + LoRA fine-tuning |
 | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| **核心思想**      | **表示学习 (Representation Learning)**                       | **指令遵循 (Instruction Following)**                         |
-| **模型学习方式**  | 冻结Embedding模型，只训练一个非常小的分类头（如`nn.Linear`），学习从固定文本向量到情感标签的映射。 | 冻结大部分基础模型参数，通过训练LoRA“适配器”来微调模型**内部的注意力机制和知识表达**，使其学会按指令生成特定答案。 |
-| **性能上限**      | **较低**。模型的理解能力被`Qwen3-Embedding-0.6B`的通用语义表示所限制，无法学习你数据集中特有的、细微的情感模式。 | **更高**。模型在微调中调整了自身对语言的理解方式，以适应你的特定任务和数据分布，能更好地捕捉讽刺、网络用语等复杂情感。 |
-| **灵活性**        | **低**。模型只能做这一件事：输出分类标签。无法扩展。         | **高**。模型学会的是一个“任务技能”。你可以轻松修改指令，让它输出“积极/消极/中性”，甚至“为什么这是积极的？”。 |
-| **训练资源开销**  | **极低**。只需训练一个几KB到几MB的分类头，普通CPU都能完成。显存占用非常小。 | **较高**。虽然LoRA效率很高，但仍需在GPU上进行，需要加载整个0.6B模型和LoRA参数到显存中进行反向传播。 |
-| **推理速度/成本** | **极快、极低**。一次前向传播即可获得Embedding向量，分类头计算可忽略不计。非常适合大规模、低延迟的生产环境。 | **较慢、较高**。需要进行自回归生成（一个词一个词地蹦），即使答案很短（如“积极”），也比一次性前向传播慢几个数量级。 |
-| **实现复杂度**    | **简单**。遵循BERT时代的技术范式，流程成熟，代码直观。       | **中等**。需要构建指令模板、配置LoRA参数、使用SFTTrainer等，比前者稍复杂，但已有成熟框架支持。 |
+| **Core Idea** | **Representation Learning** | **Instruction Following** |
+| **Model learning method** | Freeze the Embedding model, only train a very small classification head (such as `nn.Linear`), and learn the mapping from fixed text vectors to emotion labels. | Freeze most of the basic model parameters and fine-tune the model's internal attention mechanism and knowledge expression by training the LoRA "adapter" so that it can learn to generate specific answers according to instructions. |
+| **Performance Cap** | **Lower**. The model's understanding ability is limited by the generic semantic representation of `Qwen3-Embedding-0.6B`, and it cannot learn the unique and subtle emotional patterns in your data set. | **Higher**. The model adjusts its understanding of language during fine-tuning to adapt to your specific tasks and data distribution, and can better capture complex emotions such as sarcasm and Internet slang. |
+| **Flexibility** | **Low**. The model can only do one thing: output a classification label. Cannot be expanded.         | **High**. What the model learns is a "task skill". You can easily modify the command so that it outputs "Positive/Negative/Neutral" or even "Why is this positive?". |
+| **Training resource overhead** | **Extremely low**. Just train a classification head of several KB to several MB, which can be completed by ordinary CPU. The memory usage is very small. | **Higher**. Although LoRA is very efficient, it still needs to be performed on the GPU, and the entire 0.6B model and LoRA parameters need to be loaded into the video memory for backpropagation. |
+| **Inference speed/cost** | **Extremely fast, extremely low**. The Embedding vector can be obtained in one forward propagation, and the classification head calculation can be ignored. Ideal for large-scale, low-latency production environments. | **Slower, higher**. Autoregressive generation is required (hopping from word to word), even if the answer is short (like "positive"), it is orders of magnitude slower than a one-shot forward propagation. |
+| **Implementation Complexity** | **Simple**. Following the technical paradigm of the BERT era, the process is mature and the code is intuitive.       | **Medium**. It requires building instruction templates, configuring LoRA parameters, using SFTTrainer, etc. It is slightly more complicated than the former, but it is supported by mature frameworks. |
 
-## 使用说明
+## Instructions for use
 
-### 环境配置
+### Environment configuration
 ```bash
-# 安装依赖
+# Install dependencies
 pip install -r requirements.txt
 
-# 激活pytorch环境
-conda activate 你的环境名
+# Activate pytorch environment
+conda activate your environment name
 ```
 
-### 训练模型
+### Training model
 
-**Embedding + 分类头方法：**
+**Embedding + classification header method:**
 ```bash
 python qwen3_embedding_universal.py
-# 程序会询问选择模型大小（0.6B/4B/8B）
+# The program will ask to select the model size (0.6B/4B/8B)
 ```
 
-**LoRA微调方法：**
+**LoRA fine-tuning method:**
 ```bash
 python qwen3_lora_universal.py  
-# 程序会询问选择模型大小（0.6B/4B/8B）
+# The program will ask to select the model size (0.6B/4B/8B)
 ```
 
-**命令行参数：**
+**Command line parameters:**
 ```bash
-# 直接指定模型
+# Specify the model directly
 python qwen3_embedding_universal.py --model_size 0.6B
 python qwen3_lora_universal.py --model_size 4B
 
-# 自定义参数
+# Custom parameters
 python qwen3_embedding_universal.py --model_size 8B --epochs 10 --batch_size 16
 ```
 
-### 预测使用
+### Predicted usage
 
-**交互式预测：**
+**Interactive Forecast:**
 ```bash
 python predict_universal.py
-# 程序会让你选择具体的模型和方法
+# The program will let you choose specific models and methods
 ```
 
-**命令行预测：**
+**Command line prediction:**
 ```bash
-# 指定模型预测
-python predict_universal.py --model_type embedding --model_size 0.6B --text "今天天气真好"
+# Specify model predictions
+python predict_universal.py --model_type embedding --model_size 0.6B --text "The weather is really nice today"
 
-# 加载所有模型
-python predict_universal.py --load_all --text "这个电影太棒了"
+#Load all models
+python predict_universal.py --load_all --text "This movie is great"
 ```
 
-### 注意事项
+### Notes
 
-1. **显存要求**：
-   - 0.6B: 最低4GB显存
-   - 4B: 最低16GB显存  
-   - 8B: 最低32GB显存
+1. **Video memory requirements**:
+- 0.6B: Minimum 4GB video memory
+- 4B: Minimum 16GB video memory
+- 8B: Minimum 32GB video memory
 
-2. **数据格式**：每行格式为`文本内容\t标签`，标签为0（负面）或1（正面）
+2. **Data format**: The format of each line is `text content\tlabel`, and the label is 0 (negative) or 1 (positive)
 
-3. **模型选择**：初次使用建议从0.6B模型开始测试
+3. **Model Selection**: For first time use, it is recommended to start testing with the 0.6B model.
 
-4. **训练时间**：LoRA微调比Embedding方法耗时更长，建议使用GPU加速
+4. **Training time**: LoRA fine-tuning takes longer than the Embedding method. It is recommended to use GPU acceleration.

@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""
-PDF导出工具 - 使用Python直接生成PDF，无乱码
+"""PDF export tool - use Python to directly generate PDF, no garbled characters
 
-用法:
-    python ReportEngine/scripts/export_to_pdf.py <报告IR JSON文件> [输出PDF路径]
+Usage:
+    python ReportEngine/scripts/export_to_pdf.py <Report IR JSON file> [Output PDF path]
 
-示例:
+Example:
     python ReportEngine/scripts/export_to_pdf.py final_reports/ir/report_ir_xxx.json output.pdf
-    python ReportEngine/scripts/export_to_pdf.py final_reports/ir/report_ir_xxx.json
-"""
+    python ReportEngine/scripts/export_to_pdf.py final_reports/ir/report_ir_xxx.json"""
 
 import sys
 import json
@@ -19,46 +17,44 @@ from ReportEngine.renderers import PDFRenderer
 
 
 def export_to_pdf(ir_json_path: str, output_pdf_path: str = None):
-    """
-    从IR JSON文件生成PDF
+    """Generate PDF from IR JSON file
 
-    参数:
-        ir_json_path: Document IR JSON文件路径
-        output_pdf_path: 输出PDF路径（可选，默认为同名.pdf）
-    """
+    Parameters:
+        ir_json_path: Document IR JSON file path
+        output_pdf_path: output PDF path (optional, defaults to .pdf with the same name)"""
     ir_path = Path(ir_json_path)
 
     if not ir_path.exists():
-        logger.error(f"文件不存在: {ir_path}")
+        logger.error(f"File does not exist: {ir_path}")
         return False
 
-    # 读取IR数据
-    logger.info(f"读取报告: {ir_path}")
+    # Read IR data
+    logger.info(f"Read report: {ir_path}")
     with open(ir_path, 'r', encoding='utf-8') as f:
         document_ir = json.load(f)
 
-    # 确定输出路径
+    # Determine output path
     if output_pdf_path is None:
         output_pdf_path = ir_path.parent / f"{ir_path.stem}.pdf"
     else:
         output_pdf_path = Path(output_pdf_path)
 
-    # 生成PDF
-    logger.info(f"开始生成PDF...")
+    # Generate PDF
+    logger.info(f"Start generating PDF...")
     renderer = PDFRenderer()
 
     try:
         renderer.render_to_pdf(document_ir, output_pdf_path)
-        logger.success(f"✓ PDF已生成: {output_pdf_path}")
+        logger.success(f"✓ PDF generated: {output_pdf_path}")
         return True
     except Exception as e:
-        logger.error(f"✗ PDF生成失败: {e}")
-        logger.exception("详细错误信息:")
+        logger.error(f"✗ PDF generation failed: {e}")
+        logger.exception("Detailed error message:")
         return False
 
 
 def main():
-    """主函数"""
+    """main function"""
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
@@ -66,10 +62,10 @@ def main():
     ir_json_path = sys.argv[1]
     output_pdf_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    # 检查环境变量
+    # Check environment variables
     import os
     if 'DYLD_LIBRARY_PATH' not in os.environ:
-        logger.warning("未设置DYLD_LIBRARY_PATH，尝试自动设置...")
+        logger.warning("DYLD_LIBRARY_PATH is not set, trying to set it automatically...")
         os.environ['DYLD_LIBRARY_PATH'] = '/opt/homebrew/lib'
 
     success = export_to_pdf(ir_json_path, output_pdf_path)

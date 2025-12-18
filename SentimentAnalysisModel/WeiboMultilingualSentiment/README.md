@@ -1,113 +1,113 @@
-# 多语言情感分析 - Multilingual Sentiment Analysis
+# Multilingual Sentiment Analysis - Multilingual Sentiment Analysis
 
-本模块使用HuggingFace上的多语言情感分析模型进行情感分析，支持22种语言。
+This module uses the multilingual sentiment analysis model on HuggingFace for sentiment analysis, supporting 22 languages.
 
-## 模型信息
+## Model information
 
-- **模型名称**: tabularisai/multilingual-sentiment-analysis  
-- **基础模型**: distilbert-base-multilingual-cased
-- **支持语言**: 22种语言，包括：
-  - 中文 (中文)
-  - English (英语)
-  - Español (西班牙语)
-  - 日本語 (日语)
-  - 한국어 (韩语)
-  - Français (法语)
-  - Deutsch (德语)
-  - Русский (俄语)
-  - العربية (阿拉伯语)
-  - हिन्दी (印地语)
-  - Português (葡萄牙语)
-  - Italiano (意大利语)
-  - 等等...
+- **Model name**: tabularisai/multilingual-sentiment-analysis
+- **Base Model**: distilbert-base-multilingual-cased
+- **Supported Languages**: 22 languages, including:
+- Chinese (中文)
+- English
+- Español (Spanish)
+- Japanese (Japanese)
+- 한국어 (Korean)
+- Français (French)
+- Deutsch (German)
+- Русский (Russian)
+- العربية (Arabic)
+- हिन्दी (Hindi)
+- Português (Portuguese)
+- Italiano (Italian)
+- etc...
 
-- **输出类别**: 5级情感分类
-  - 非常负面 (Very Negative)
-  - 负面 (Negative)
-  - 中性 (Neutral)
-  - 正面 (Positive)
-  - 非常正面 (Very Positive)
+- **Output Category**: 5-level emotion classification
+- Very Negative
+- Negative
+- Neutral
+-Positive
+- Very Positive
 
-## 快速开始
+## Quick Start
 
-1. 确保已安装依赖：
+1. Make sure the dependencies are installed:
 ```bash
 pip install transformers torch
 ```
 
-2. 运行预测程序：
+2. Run the forecast program:
 ```bash
 python predict.py
 ```
 
-3. 输入任意语言的文本进行分析：
+3. Enter text in any language for analysis:
 ```
-请输入文本: I love this product!
-预测结果: 非常正面 (置信度: 0.9456)
-```
-
-4. 查看多语言示例：
-```
-请输入文本: demo
+Please enter text: I love this product!
+Prediction: Very Positive (Confidence: 0.9456)
 ```
 
-## 代码示例
+4. View multilingual examples:
+```
+Please enter text: demo
+```
+
+## Code Example
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
-# 加载模型
+#Load model
 model_name = "tabularisai/multilingual-sentiment-analysis"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-# 预测
+# predict
 texts = [
-    "今天心情很好",  # 中文
-    "I love this!",  # 英文
-    "¡Me encanta!"   # 西班牙文
+"I'm in a good mood today", #中文
+"I love this!", # in English
+"¡Me encanta!" # Spanish
 ]
 
 for text in texts:
     inputs = tokenizer(text, return_tensors="pt")
     outputs = model(**inputs)
     prediction = torch.argmax(outputs.logits, dim=1).item()
-    sentiment_map = {0: "非常负面", 1: "负面", 2: "中性", 3: "正面", 4: "非常正面"}
+sentiment_map = {0: "Very negative", 1: "Negative", 2: "Neutral", 3: "Positive", 4: "Very positive"}
     print(f"{text} -> {sentiment_map[prediction]}")
 ```
 
-## 特色功能
+## Features
 
-- **多语言支持**: 无需指定语言，自动识别22种语言
-- **5级精细分类**: 比传统二分类更细致的情感分析
-- **高精度**: 基于DistilBERT的先进架构
-- **本地缓存**: 首次下载后保存到本地，加快后续使用
+- **Multi-language support**: No need to specify a language, automatically recognizes 22 languages
+- **Level 5 Fine Classification**: More detailed sentiment analysis than traditional two-level classification
+- **High Accuracy**: Advanced architecture based on DistilBERT
+- **Local cache**: Save it locally after the first download to speed up subsequent use.
 
-## 应用场景
+## Application scenarios
 
-- 国际社交媒体监控
-- 多语言客户反馈分析
-- 全球产品评论情感分类
-- 跨语言品牌情感追踪
-- 多语言客服优化
-- 国际市场研究
+- International social media monitoring
+- Multilingual customer feedback analysis
+- Global product review sentiment classification
+- Cross-language brand sentiment tracking
+- Multi-language customer service optimization
+- International market research
 
-## 模型存储
+## Model storage
 
-- 首次运行时会自动下载模型到当前目录的 `model` 文件夹
-- 后续运行会直接从本地加载，无需重复下载
-- 模型大小约135MB，首次下载需要网络连接
+- The model will be automatically downloaded to the `model` folder in the current directory when running for the first time.
+- Subsequent runs will be loaded directly from local, no need to download again
+- The model size is about 135MB, and an internet connection is required for the first download.
 
-## 文件说明
+## File description
 
-- `predict.py`: 主预测程序，使用直接模型调用
-- `README.md`: 使用说明
+- `predict.py`: main prediction program, using direct model calls
+- `README.md`: instructions for use
 
-## 注意事项
+## Notes
 
-- 首次运行时会自动下载模型，需要网络连接
-- 模型会保存到当前目录，方便后续使用
-- 支持GPU加速，会自动检测可用设备
-- 如需清理模型文件，删除 `model` 文件夹即可
-- 该模型基于合成数据训练，在实际应用中建议进行验证
+- The model will be automatically downloaded when running for the first time, and an Internet connection is required
+- The model will be saved to the current directory for subsequent use.
+- Supports GPU acceleration and automatically detects available devices
+- If you need to clean up the model files, delete the `model` folder
+- The model is trained based on synthetic data and is recommended for verification in practical applications.

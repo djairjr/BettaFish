@@ -19,7 +19,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
                         {
                             "cells": [
                                 {"blocks": []},
-                                {"text": "同比变化", "blocks": None},
+                                {"text": "Year-on-year change", "blocks": None},
                             ]
                         }
                     ],
@@ -38,7 +38,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
                 self.assertEqual(block.get("type"), "paragraph")
 
     def test_table_rows_scalar_values_expanded(self):
-        chapter = {"blocks": [{"type": "table", "rows": ["全国趋势"]}]}
+        chapter = {"blocks": [{"type": "table", "rows": ["national trends"]}]}
         self.node._sanitize_chapter_blocks(chapter)
         table_block = chapter["blocks"][0]
         self.assertEqual(len(table_block["rows"]), 1)
@@ -49,14 +49,14 @@ class ChapterSanitizationTestCase(unittest.TestCase):
         self.assertIsInstance(cell.get("blocks"), list)
         self.assertEqual(
             cell["blocks"][0]["inlines"][0]["text"],
-            "全国趋势",
+            "national trends",
         )
 
     def test_engine_quote_validation(self):
         validator = IRValidator()
         chapter = {
             "chapterId": "S1",
-            "title": "Engine 引用校验",
+            "title": "Engine reference verification",
             "anchor": "section-1",
             "order": 1,
             "blocks": [
@@ -67,7 +67,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
                     "blocks": [
                         {
                             "type": "paragraph",
-                            "inlines": [{"text": "来自 Insight Engine 的观点"}],
+                            "inlines": [{"text": "View from Insight Engine"}],
                         }
                     ],
                 }
@@ -81,7 +81,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
         validator = IRValidator()
         chapter = {
             "chapterId": "S1",
-            "title": "Engine 引用校验",
+            "title": "Engine reference verification",
             "anchor": "section-1",
             "order": 1,
             "blocks": [
@@ -103,8 +103,8 @@ class ChapterSanitizationTestCase(unittest.TestCase):
         }
         valid, errors = validator.validate_chapter(chapter)
         self.assertFalse(valid)
-        self.assertTrue(any("仅允许 paragraph" in err for err in errors))
-        self.assertTrue(any("仅允许 bold/italic" in err for err in errors))
+        self.assertTrue(any("Only paragraphs are allowed" in err for err in errors))
+        self.assertTrue(any("Only bold/italic allowed" in err for err in errors))
 
     def test_engine_quote_sanitization_strips_disallowed(self):
         chapter = {
@@ -113,7 +113,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
                     "type": "engineQuote",
                     "engine": "query",
                     "blocks": [
-                        {"type": "list", "items": [["非法"]]},
+                        {"type": "list", "items": [["illegal"]]},
                         {
                             "type": "paragraph",
                             "inlines": [
@@ -143,7 +143,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
         validator = IRValidator()
         chapter = {
             "chapterId": "S1",
-            "title": "Engine 引用校验",
+            "title": "Engine reference verification",
             "anchor": "section-1",
             "order": 1,
             "blocks": [
@@ -154,7 +154,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
                     "blocks": [
                         {
                             "type": "paragraph",
-                            "inlines": [{"text": "错误标题"}],
+                            "inlines": [{"text": "error title"}],
                         }
                     ],
                 }
@@ -162,7 +162,7 @@ class ChapterSanitizationTestCase(unittest.TestCase):
         }
         valid, errors = validator.validate_chapter(chapter)
         self.assertFalse(valid)
-        self.assertTrue(any("title 必须与engine一致" in err for err in errors))
+        self.assertTrue(any("title must be consistent with engine" in err for err in errors))
 
 
 if __name__ == "__main__":

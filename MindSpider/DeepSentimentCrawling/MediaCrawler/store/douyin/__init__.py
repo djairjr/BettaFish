@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
@@ -39,15 +39,13 @@ class DouyinStoreFactory:
 
 
 def _extract_note_image_list(aweme_detail: Dict) -> List[str]:
-    """
-    提取笔记图片列表
+    """Extract note picture list
 
     Args:
-        aweme_detail (Dict): 抖音内容详情
+        awesome_detail (Dict): Douyin content details
 
     Returns:
-        List[str]: 笔记图片列表
-    """
+        List[str]: Note picture list"""
     images_res: List[str] = []
     images: List[Dict] = aweme_detail.get("images", [])
 
@@ -55,7 +53,7 @@ def _extract_note_image_list(aweme_detail: Dict) -> List[str]:
         return []
 
     for image in images:
-        image_url_list = image.get("url_list", [])  # download_url_list 为带水印的图片，url_list 为无水印的图片
+        image_url_list = image.get("url_list", [])  # download_url_list is the picture with watermark, url_list is the picture without watermark
         if image_url_list:
             images_res.append(image_url_list[-1])
 
@@ -63,15 +61,13 @@ def _extract_note_image_list(aweme_detail: Dict) -> List[str]:
 
 
 def _extract_comment_image_list(comment_item: Dict) -> List[str]:
-    """
-    提取评论图片列表
+    """Extract comment image list
 
     Args:
-        comment_item (Dict): 抖音评论
+        comment_item (Dict): Douyin comments
 
     Returns:
-        List[str]: 评论图片列表
-    """
+        List[str]: Comment picture list"""
     images_res: List[str] = []
     image_list: List[Dict] = comment_item.get("image_list", [])
 
@@ -87,15 +83,13 @@ def _extract_comment_image_list(comment_item: Dict) -> List[str]:
 
 
 def _extract_content_cover_url(aweme_detail: Dict) -> str:
-    """
-    提取视频封面地址
+    """Extract video cover address
 
     Args:
-        aweme_detail (Dict): 抖音内容详情
+        awesome_detail (Dict): Douyin content details
 
     Returns:
-        str: 视频封面地址
-    """
+        str: video cover address"""
     res_cover_url = ""
 
     video_item = aweme_detail.get("video", {})
@@ -107,15 +101,13 @@ def _extract_content_cover_url(aweme_detail: Dict) -> str:
 
 
 def _extract_video_download_url(aweme_detail: Dict) -> str:
-    """
-    提取视频下载地址
+    """Extract video download address
 
     Args:
-        aweme_detail (Dict): 抖音视频
+        awesome_detail (Dict): Douyin video
 
     Returns:
-        str: 视频下载地址
-    """
+        str: video download address"""
     video_item = aweme_detail.get("video", {})
     url_h264_list = video_item.get("play_addr_h264", {}).get("url_list", [])
     url_256_list = video_item.get("play_addr_256", {}).get("url_list", [])
@@ -127,15 +119,13 @@ def _extract_video_download_url(aweme_detail: Dict) -> str:
 
 
 def _extract_music_download_url(aweme_detail: Dict) -> str:
-    """
-    提取音乐下载地址
+    """Extract music download address
 
     Args:
-        aweme_detail (Dict): 抖音视频
+        awesome_detail (Dict): Douyin video
 
     Returns:
-        str: 音乐下载地址
-    """
+        str: music download address"""
     music_item = aweme_detail.get("music", {})
     play_url = music_item.get("play_url", {})
     music_url = play_url.get("uri", "")
@@ -218,12 +208,12 @@ async def update_dy_aweme_comment(aweme_id: str, comment_item: Dict):
 
 async def save_creator(user_id: str, creator: Dict):
     user_info = creator.get("user", {})
-    gender_map = {0: "未知", 1: "男", 2: "女"}
+    gender_map = {0: "unknown", 1: "male", 2: "female"}
     avatar_uri = user_info.get("avatar_300x300", {}).get("uri")
     local_db_item = {
         "user_id": user_id,
         "nickname": user_info.get("nickname"),
-        "gender": gender_map.get(user_info.get("gender"), "未知"),
+        "gender": gender_map.get(user_info.get("gender"), "unknown"),
         "avatar": f"https://p3-pc.douyinpic.com/img/{avatar_uri}" + r"~c5_300x300.jpeg?from=2956013662",
         "desc": user_info.get("signature"),
         "ip_location": user_info.get("ip_location"),
@@ -238,30 +228,24 @@ async def save_creator(user_id: str, creator: Dict):
 
 
 async def update_dy_aweme_image(aweme_id, pic_content, extension_file_name):
-    """
-    更新抖音笔记图片
+    """Update Douyin note pictures
     Args:
-        aweme_id:
+        awesome_id:
         pic_content:
         extension_file_name:
 
-    Returns:
-
-    """
+    Returns:"""
 
     await DouYinImage().store_image({"aweme_id": aweme_id, "pic_content": pic_content, "extension_file_name": extension_file_name})
 
 
 async def update_dy_aweme_video(aweme_id, video_content, extension_file_name):
-    """
-    更新抖音短视频
+    """Update Douyin short video
     Args:
-        aweme_id:
+        awesome_id:
         video_content:
         extension_file_name:
 
-    Returns:
-
-    """
+    Returns:"""
 
     await DouYinVideo().store_video({"aweme_id": aweme_id, "video_content": video_content, "extension_file_name": extension_file_name})

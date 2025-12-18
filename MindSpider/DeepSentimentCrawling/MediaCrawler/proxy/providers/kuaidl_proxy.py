@@ -1,18 +1,18 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2024/4/5 09:43
-# @Desc    : 快代理HTTP实现，官方文档：https://www.kuaidaili.com/?ref=ldwkjqipvz6c
+# @Desc: Fast proxy HTTP implementation, official document: https://www.kuaidaili.com/?ref=ldwkjqipvz6c
 import os
 import re
 from typing import Dict, List
@@ -27,19 +27,16 @@ from tools import utils
 
 class KuaidailiProxyModel(BaseModel):
     ip: str = Field("ip")
-    port: int = Field("端口")
-    expire_ts: int = Field("过期时间")
+    port: int = Field("port")
+    expire_ts: int = Field("Expiration time")
 
 
 def parse_kuaidaili_proxy(proxy_info: str) -> KuaidailiProxyModel:
-    """
-    解析快代理的IP信息
+    """Parse the IP information of the fast proxy
     Args:
         proxy_info:
 
-    Returns:
-
-    """
+    Returns:"""
     proxies: List[str] = proxy_info.split(":")
     if len(proxies) != 2:
         raise Exception("not invalid kuaidaili proxy info")
@@ -81,22 +78,19 @@ class KuaiDaiLiProxy(ProxyProvider):
         }
 
     async def get_proxy(self, num: int) -> List[IpInfoModel]:
-        """
-        快代理实现
+        """Fast proxy implementation
         Args:
             num:
 
-        Returns:
-
-        """
+        Returns:"""
         uri = "/api/getdps/"
 
-        # 优先从缓存中拿 IP
+        # Get IP from cache first
         ip_cache_list = self.ip_cache.load_all_ip(proxy_brand_name=self.proxy_brand_name)
         if len(ip_cache_list) >= num:
             return ip_cache_list[:num]
 
-        # 如果缓存中的数量不够，从IP代理商获取补上，再存入缓存中
+        # If the number in the cache is not enough, get it from the IP agent and store it in the cache.
         need_get_count = num - len(ip_cache_list)
         self.params.update({"num": need_get_count})
 
@@ -132,14 +126,11 @@ class KuaiDaiLiProxy(ProxyProvider):
 
 
 def new_kuai_daili_proxy() -> KuaiDaiLiProxy:
-    """
-    构造快代理HTTP实例
-    Returns:
-
-    """
+    """Construct a fast proxy HTTP instance
+    Returns:"""
     return KuaiDaiLiProxy(
-        kdl_secret_id=os.getenv("kdl_secret_id", "你的快代理secert_id"),
-        kdl_signature=os.getenv("kdl_signature", "你的快代理签名"),
-        kdl_user_name=os.getenv("kdl_user_name", "你的快代理用户名"),
-        kdl_user_pwd=os.getenv("kdl_user_pwd", "你的快代理密码"),
+        kdl_secret_id=os.getenv("kdl_secret_id", "Your fast agent secret_id"),
+        kdl_signature=os.getenv("kdl_signature", "Your express agent signature"),
+        kdl_user_name=os.getenv("kdl_user_name", "Your fast agent username"),
+        kdl_user_pwd=os.getenv("kdl_user_pwd", "Your fast agent password"),
     )

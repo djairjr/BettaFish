@@ -1,19 +1,19 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2023/12/2 23:26
-# @Desc    : bilibili 请求参数签名
-# 逆向实现参考：https://socialsisteryi.github.io/bilibili-API-collect/docs/misc/sign/wbi.html#wbi%E7%AD%BE%E5%90%8D%E7%AE%97%E6%B3%95
+# @Desc: bilibili request parameter signature
+# Reverse implementation reference: https://socialsisteryi.github.io/bilibili-API-collect/docs/misc/sign/wbi.html#wbi%E7%AD%BE%E5%90%8D%E7%AE%97%E6%B3%95
 import re
 import urllib.parse
 from hashlib import md5
@@ -35,10 +35,8 @@ class BilibiliSign:
         ]
 
     def get_salt(self) -> str:
-        """
-        获取加盐的 key
-        :return:
-        """
+        """Get the salted key
+        :return:"""
         salt = ""
         mixin_key = self.img_key + self.sub_key
         for mt in self.map_table:
@@ -46,45 +44,41 @@ class BilibiliSign:
         return salt[:32]
 
     def sign(self, req_data: Dict) -> Dict:
-        """
-        请求参数中加上当前时间戳对请求参数中的key进行字典序排序
-        再将请求参数进行 url 编码集合 salt 进行 md5 就可以生成w_rid参数了
+        """Add the current timestamp to the request parameters to sort the keys in the request parameters in lexicographic order.
+        Then the request parameters are url encoded and salted to md5 to generate the w_rid parameter.
         :param req_data:
-        :return:
-        """
+        :return:"""
         current_ts = utils.get_unix_timestamp()
         req_data.update({"wts": current_ts})
         req_data = dict(sorted(req_data.items()))
         req_data = {
-            # 过滤 value 中的 "!'()*" 字符
+            # Filter "!'()*" characters in value
             k: ''.join(filter(lambda ch: ch not in "!'()*", str(v)))
             for k, v
             in req_data.items()
         }
         query = urllib.parse.urlencode(req_data)
         salt = self.get_salt()
-        wbi_sign = md5((query + salt).encode()).hexdigest()  # 计算 w_rid
+        wbi_sign = md5((query + salt).encode()).hexdigest()  # Calculate w_rid
         req_data['w_rid'] = wbi_sign
         return req_data
 
 
 def parse_video_info_from_url(url: str) -> VideoUrlInfo:
-    """
-    从B站视频URL中解析出视频ID
+    """Parse the video ID from the video URL of Bilibili
     Args:
-        url: B站视频链接
+        url: B station video link
             - https://www.bilibili.com/video/BV1dwuKzmE26/?spm_id_from=333.1387.homepage.video_card.click
             - https://www.bilibili.com/video/BV1d54y1g7db
-            - BV1d54y1g7db (直接传入BV号)
+            - BV1d54y1g7db (pass in the BV number directly)
     Returns:
-        VideoUrlInfo: 包含视频ID的对象
-    """
-    # 如果传入的已经是BV号,直接返回
+        VideoUrlInfo: object containing the video ID"""
+    # If the incoming number is already a BV number, it will be returned directly.
     if url.startswith("BV"):
         return VideoUrlInfo(video_id=url)
 
-    # 使用正则表达式提取BV号
-    # 匹配 /video/BV... 或 /video/av... 格式
+    # Use regular expression to extract BV number
+    # Matches /video/BV... or /video/av... format
     bv_pattern = r'/video/(BV[a-zA-Z0-9]+)'
     match = re.search(bv_pattern, url)
 
@@ -92,26 +86,24 @@ def parse_video_info_from_url(url: str) -> VideoUrlInfo:
         video_id = match.group(1)
         return VideoUrlInfo(video_id=video_id)
 
-    raise ValueError(f"无法从URL中解析出视频ID: {url}")
+    raise ValueError(f"Unable to parse video ID from URL: {url}")
 
 
 def parse_creator_info_from_url(url: str) -> CreatorUrlInfo:
-    """
-    从B站创作者空间URL中解析出创作者ID
+    """Parse the creator ID from the creator space URL of Bilibili
     Args:
-        url: B站创作者空间链接
+        url: Bilibili creator space link
             - https://space.bilibili.com/434377496?spm_id_from=333.1007.0.0
             - https://space.bilibili.com/20813884
-            - 434377496 (直接传入UID)
+            - 434377496 (pass in UID directly)
     Returns:
-        CreatorUrlInfo: 包含创作者ID的对象
-    """
-    # 如果传入的已经是纯数字ID,直接返回
+        CreatorUrlInfo: object containing the creator ID"""
+    # If the incoming ID is already a pure numeric ID, return it directly.
     if url.isdigit():
         return CreatorUrlInfo(creator_id=url)
 
-    # 使用正则表达式提取UID
-    # 匹配 /space.bilibili.com/数字 格式
+    # Extract UID using regular expression
+    # Match /space.bilibili.com/number format
     uid_pattern = r'space\.bilibili\.com/(\d+)'
     match = re.search(uid_pattern, url)
 
@@ -119,20 +111,20 @@ def parse_creator_info_from_url(url: str) -> CreatorUrlInfo:
         creator_id = match.group(1)
         return CreatorUrlInfo(creator_id=creator_id)
 
-    raise ValueError(f"无法从URL中解析出创作者ID: {url}")
+    raise ValueError(f"Unable to parse creator ID from URL: {url}")
 
 
 if __name__ == '__main__':
-    # 测试视频URL解析
+    # Test video URL parsing
     video_url1 = "https://www.bilibili.com/video/BV1dwuKzmE26/?spm_id_from=333.1387.homepage.video_card.click"
     video_url2 = "BV1d54y1g7db"
-    print("视频URL解析测试:")
+    print("Video URL parsing test:")
     print(f"URL1: {video_url1} -> {parse_video_info_from_url(video_url1)}")
     print(f"URL2: {video_url2} -> {parse_video_info_from_url(video_url2)}")
 
-    # 测试创作者URL解析
+    # Test creator URL parsing
     creator_url1 = "https://space.bilibili.com/434377496?spm_id_from=333.1007.0.0"
     creator_url2 = "20813884"
-    print("\n创作者URL解析测试:")
+    print("\nCreator URL parsing test:")
     print(f"URL1: {creator_url1} -> {parse_creator_info_from_url(creator_url1)}")
     print(f"URL2: {creator_url2} -> {parse_creator_info_from_url(creator_url2)}")

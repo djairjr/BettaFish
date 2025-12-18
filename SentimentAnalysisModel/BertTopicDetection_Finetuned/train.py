@@ -7,7 +7,7 @@ import math
 import inspect
 from typing import Dict, List, Optional, Tuple
 
-# ========== 单卡锁定（在导入 torch/transformers 前执行） ==========
+# ========== Single card locking (executed before importing torch/transformers) ==========
 def _extract_gpu_arg(argv: List[str], default: str = "0") -> str:
     for i, arg in enumerate(argv):
         if arg.startswith("--gpu="):
@@ -21,12 +21,12 @@ try:
     gpu_to_use = _extract_gpu_arg(sys.argv, default="0")
 except Exception:
     gpu_to_use = "0"
-# 若未设置或暴露了多卡，则强制只暴露单卡（默认0）以确保直接运行稳定
+# If it is not set or multiple cards are exposed, it is forced to expose only a single card (default 0) to ensure stable operation directly.
 if (not env_vis) or ("," in env_vis):
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_to_use
 os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
 
-# 清理可能由外部启动器注入的分布式环境变量，避免误触多卡/分布式
+# Clean up distributed environment variables that may be injected by external launchers to avoid accidentally touching multi-card/distributed
 for _k in ["RANK", "LOCAL_RANK", "WORLD_SIZE"]:
     os.environ.pop(_k, None)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -52,7 +52,7 @@ try:
 except Exception:  # pragma: no cover
     EarlyStoppingCallback = None  # type: ignore
 
-# 预置可选中文基座模型（可扩展）
+# Preset optional Chinese base model (expandable)
 BACKBONE_CANDIDATES: List[Tuple[str, str]] = [
     ("1) google-bert/bert-base-chinese", "google-bert/bert-base-chinese"),
     ("2) hfl/chinese-roberta-wwm-ext-large", "hfl/chinese-roberta-wwm-ext-large"),
@@ -66,12 +66,11 @@ BACKBONE_CANDIDATES: List[Tuple[str, str]] = [
 
 
 def prompt_backbone_interactive(current_id: str) -> str:
-    """交互式选择基座模型。
+    """Interactively select a base model.
 
-    - 当处于非交互环境（stdin 非 TTY）或设置了环境变量 NON_INTERACTIVE=1 时，直接返回 current_id。
-    - 用户可输入序号选择预置项，或直接输入任意 Hugging Face 模型 ID。
-    - 空回车使用当前默认。
-    """
+    - When in a non-interactive environment (stdin is not TTY) or the environment variable NON_INTERACTIVE=1 is set, current_id is returned directly.
+    - Users can enter the serial number to select the preset item, or directly enter any Hugging Face model ID.
+    - An empty carriage return uses the current default."""
     if os.environ.get("NON_INTERACTIVE", "0") == "1":
         return current_id
     try:
@@ -80,22 +79,22 @@ def prompt_backbone_interactive(current_id: str) -> str:
     except Exception:
         return current_id
 
-    print("\n可选中文基座模型（直接回车使用默认）:")
+    print("\nOptional Chinese base model (press enter to use the default):")
     for label, hf_id in BACKBONE_CANDIDATES:
         print(f"  {label}")
-    print(f"当前默认: {current_id}")
-    choice = input("请输入序号或直接粘贴模型ID（回车沿用默认）: ").strip()
+    print(f"Current default: {current_id}")
+    choice = input("Please enter the serial number or paste the model ID directly (press Enter to keep the default):").strip()
     if not choice:
         return current_id
-    # 数字选项
+    # digital options
     if choice.isdigit():
         idx = int(choice)
         for label, hf_id in BACKBONE_CANDIDATES:
             if label.startswith(f"{idx})"):
                 return hf_id
-        print("未找到该序号，沿用默认。")
+        print("The serial number is not found, the default is used.")
         return current_id
-    # 自定义 HF 模型 ID
+    # Custom HF model ID
     return choice
 
 
@@ -110,12 +109,12 @@ def ensure_base_model_local(model_name_or_path: str, local_model_root: str) -> T
     def is_ready(path: str) -> bool:
         return os.path.isdir(path) and os.path.isfile(os.path.join(path, "config.json"))
 
-    # 1) 本地现成
+    # 1) Local ready-made
     if is_ready(base_dir):
         tokenizer = AutoTokenizer.from_pretrained(base_dir)
         return base_dir, tokenizer
 
-    # 2) 本机缓存
+    # 2) Native cache
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, local_files_only=True)
         base = AutoModel.from_pretrained(model_name_or_path, local_files_only=True)
@@ -126,7 +125,7 @@ def ensure_base_model_local(model_name_or_path: str, local_model_root: str) -> T
     except Exception:
         pass
 
-    # 3) 远程下载
+    # 3) Remote download
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     base = AutoModel.from_pretrained(model_name_or_path)
     os.makedirs(base_dir, exist_ok=True)
@@ -212,19 +211,19 @@ def autodetect_columns(df: pd.DataFrame, text_col: str, label_col: str) -> Tuple
                 break
     if t == "auto" or l == "auto":
         raise ValueError(
-            f"无法自动识别列名，请显式传入 --text_col 与 --label_col。现有列: {list(df.columns)}"
+            f"Column names cannot be automatically recognized, please pass in --text_col and --label_col explicitly. Existing columns: {list(df.columns)}"
         )
     return t, l
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="使用 google-bert/bert-base-chinese 在本目录数据集上进行文本分类微调")
+    parser = argparse.ArgumentParser(description="Use google-bert/bert-base-chinese to fine-tune text classification on this catalog dataset")
     parser.add_argument("--train_file", type=str, default="./dataset/web_text_zh_train.csv")
     parser.add_argument("--valid_file", type=str, default="./dataset/web_text_zh_valid.csv")
-    parser.add_argument("--text_col", type=str, default="auto", help="文本列名，默认自动识别")
-    parser.add_argument("--label_col", type=str, default="auto", help="标签列名，默认自动识别")
-    parser.add_argument("--model_root", type=str, default="./model", help="本地模型根目录")
-    parser.add_argument("--pretrained_name", type=str, default="google-bert/bert-base-chinese", help="Hugging Face 模型ID；留空则进入交互选择")
+    parser.add_argument("--text_col", type=str, default="auto", help="Text column name, automatically recognized by default")
+    parser.add_argument("--label_col", type=str, default="auto", help="Label column name, automatically recognized by default")
+    parser.add_argument("--model_root", type=str, default="./model", help="Local model root directory")
+    parser.add_argument("--pretrained_name", type=str, default="google-bert/bert-base-chinese", help="Hugging Face model ID; leave it blank to enter interactive selection")
     parser.add_argument("--save_subdir", type=str, default="bert-chinese-classifier")
     parser.add_argument("--max_length", type=int, default=128)
     parser.add_argument("--batch_size", type=int, default=64)
@@ -234,10 +233,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--fp16", action="store_true")
-    parser.add_argument("--gpu", type=str, default=os.environ.get("CUDA_VISIBLE_DEVICES", "0"), help="指定单卡 GPU，如 0 或 1")
-    parser.add_argument("--eval_fraction", type=float, default=0.25, help="每多少个 epoch 做一次评估与保存，例如 0.25 表示每四分之一个 epoch")
-    parser.add_argument("--early_stop_patience", type=int, default=5, help="早停耐心（以评估轮次计）")
-    parser.add_argument("--early_stop_threshold", type=float, default=0.0, help="早停最小改善阈值（与 metric_for_best_model 同单位）")
+    parser.add_argument("--gpu", type=str, default=os.environ.get("CUDA_VISIBLE_DEVICES", "0"), help="Specify a single card GPU, such as 0 or 1")
+    parser.add_argument("--eval_fraction", type=float, default=0.25, help="How many epochs are evaluated and saved, for example, 0.25 means every quarter epoch")
+    parser.add_argument("--early_stop_patience", type=int, default=5, help="Early Stop Patience (Based on Evaluation Rounds)")
+    parser.add_argument("--early_stop_threshold", type=float, default=0.0, help="Minimum improvement threshold for early stopping (same unit as metric_for_best_model)")
     return parser.parse_args()
 
 
@@ -249,56 +248,56 @@ def main() -> None:
     model_root = args.model_root if os.path.isabs(args.model_root) else os.path.join(script_dir, args.model_root)
     os.makedirs(model_root, exist_ok=True)
 
-    # 交互式选择基座模型（若允许交互且未通过环境禁用）
+    # Interactively select a base model (if interaction is allowed and not disabled via the environment)
     selected_model_id = prompt_backbone_interactive(args.pretrained_name)
-    # 确保基础模型就绪
+    # Make sure the base model is ready
     base_dir, tokenizer = ensure_base_model_local(selected_model_id, model_root)
-    print(f"[Info] 使用基础模型目录: {base_dir}")
+    print(f"[Info] Use base model directory: {base_dir}")
 
-    # 读取数据
+    # Read data
     train_path = args.train_file if os.path.isabs(args.train_file) else os.path.join(script_dir, args.train_file)
     valid_path = args.valid_file if os.path.isabs(args.valid_file) else os.path.join(script_dir, args.valid_file)
     if not os.path.isfile(train_path):
-        raise FileNotFoundError(f"训练集不存在: {train_path}")
+        raise FileNotFoundError(f"The training set does not exist: {train_path}")
     train_df = pd.read_csv(train_path)
     if not os.path.isfile(valid_path):
-        # 若未提供或不存在验证集，自动切分
+        # If the verification set is not provided or does not exist, it will be automatically split.
         shuffled = train_df.sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
         split_idx = int(len(shuffled) * 0.9)
         valid_df = shuffled.iloc[split_idx:].reset_index(drop=True)
         train_df = shuffled.iloc[:split_idx].reset_index(drop=True)
     else:
         valid_df = pd.read_csv(valid_path)
-    print(f"[Info] 训练集: {train_path} | 样本数: {len(train_df)}")
-    print(f"[Info] 验证集: {valid_path if os.path.isfile(valid_path) else '(从训练集切分)'} | 样本数: {len(valid_df)}")
+    print(f"[Info] Training set: {train_path} | Number of samples: {len(train_df)}")
+    print(f"[Info] Validation set: {valid_path if os.path.isfile(valid_path) else '(split from training set)'} | Number of samples: {len(valid_df)}")
 
-    # 自动识别列名
+    # Automatically recognize column names
     text_col, label_col = autodetect_columns(train_df, args.text_col, args.label_col)
-    print(f"[Info] 文本列: {text_col} | 标签列: {label_col}")
+    print(f"[Info] Text column: {text_col} | Label column: {label_col}")
 
-    # 标签映射（使用 训练集∪验证集 的并集，避免验证集中出现新标签导致报错）
+    # Label mapping (use the union of training set ∪ verification set to avoid errors caused by new labels in the verification set)
     combined_labels_df = pd.concat([train_df[[label_col]], valid_df[[label_col]]], ignore_index=True)
     label2id, id2label = build_label_mappings(combined_labels_df, label_col)
     if len(label2id) < 2:
-        raise ValueError("标签类别数少于 2，无法训练分类模型。")
-    print(f"[Info] 标签类别数: {len(label2id)}")
-    # 提示验证集中未出现在训练集的标签数量
+        raise ValueError("The number of label categories is less than 2, and the classification model cannot be trained.")
+    print(f"[Info] Number of label categories: {len(label2id)}")
+    # Prompt the number of labels in the validation set that do not appear in the training set
     try:
         train_label_set = set(str(x) for x in train_df[label_col].dropna().astype(str).tolist())
         valid_label_set = set(str(x) for x in valid_df[label_col].dropna().astype(str).tolist())
         unseen_in_train = sorted(valid_label_set - train_label_set)
         if unseen_in_train:
             preview = ", ".join(unseen_in_train[:10])
-            print(f"[Warn] 验证集中存在 {len(unseen_in_train)} 个训练未出现的标签（已纳入映射以避免报错）。示例: {preview} ...")
+            print(f"[Warn] There are {len(unseen_in_train)} labels in the validation set that do not appear in training (have been included in the mapping to avoid errors). Example: {preview} ...")
     except Exception:
         pass
 
-    # 数据集
+    # Data set
     train_dataset = TextClassificationDataset(train_df, tokenizer, text_col, label_col, label2id, args.max_length)
     eval_dataset = TextClassificationDataset(valid_df, tokenizer, text_col, label_col, label2id, args.max_length)
     collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    # 模型
+    # Model
     config = AutoConfig.from_pretrained(
         base_dir,
         num_labels=len(label2id),
@@ -311,10 +310,10 @@ def main() -> None:
         ignore_mismatched_sizes=True,
     )
 
-    # 训练参数
+    # training parameters
     output_dir = os.path.join(model_root, args.save_subdir)
     os.makedirs(output_dir, exist_ok=True)
-    # 训练参数（兼容不同 transformers 版本）
+    # Training parameters (compatible with different transformers versions)
     args_dict = {
         "output_dir": output_dir,
         "per_device_train_batch_size": args.batch_size,
@@ -330,15 +329,15 @@ def main() -> None:
     sig = inspect.signature(TrainingArguments.__init__)
     allowed = set(sig.parameters.keys())
 
-    # 可选参数（仅在支持时添加，尽量简化与参考实现一致以提升兼容性）
+    # Optional parameters (only added when supported, try to be as simple as possible and consistent with the reference implementation to improve compatibility)
     if "warmup_ratio" in allowed:
         args_dict["warmup_ratio"] = args.warmup_ratio
     if "report_to" in allowed:
         args_dict["report_to"] = []
-    # 评估/保存步进：按 eval_fraction 折算每个 epoch 的步数
+    # Evaluate/save steps: fold the number of steps in each epoch according to eval_fraction
     steps_per_epoch = max(1, math.ceil(len(train_dataset) / max(1, args.batch_size)))
     eval_every_steps = max(1, math.ceil(steps_per_epoch * max(0.01, min(1.0, args.eval_fraction))))
-    # 策略式（新/旧版本字段名兼容）
+    # Strategic (new/old version field names are compatible)
     key_eval = "evaluation_strategy" if "evaluation_strategy" in allowed else ("eval_strategy" if "eval_strategy" in allowed else None)
     if key_eval:
         args_dict[key_eval] = "steps"
@@ -350,10 +349,10 @@ def main() -> None:
         args_dict["save_steps"] = eval_every_steps
     if "save_total_limit" in allowed:
         args_dict["save_total_limit"] = 5
-    # 将日志步长与评估/保存步长对齐，减少刷屏
+    # Align log step size with evaluation/save step size to reduce screen swiping
     if "logging_steps" in allowed:
         args_dict["logging_steps"] = eval_every_steps
-    # 最优模型回滚（仅当评估与保存策略一致时开启）
+    # Optimal model rollback (only enabled when evaluation is consistent with save strategy)
     if "metric_for_best_model" in allowed:
         args_dict["metric_for_best_model"] = "f1"
     if "greater_is_better" in allowed:
@@ -364,18 +363,18 @@ def main() -> None:
         if eval_strat == save_strat and eval_strat in ("steps", "epoch"):
             args_dict["load_best_model_at_end"] = True
 
-    # 兼容无 warmup_ratio 的版本：若支持 warmup_steps 则忽略比例
+    # Compatible with versions without warmup_ratio: if warmup_steps is supported, the ratio is ignored
     if "warmup_ratio" not in allowed and "warmup_steps" in allowed:
-        # 不计算总步数，默认 0
+        # Do not calculate the total number of steps, default 0
         args_dict["warmup_steps"] = 0
 
-    # 若不支持策略式参数：退化为每 eval_every_steps 步保存/评估
+    # If strategic parameters are not supported: degenerate to save/evaluate every eval_every_steps step
     if "save_strategy" not in allowed and "save_steps" in allowed:
         args_dict["save_steps"] = eval_every_steps
     if ("evaluation_strategy" not in allowed and "eval_strategy" not in allowed) and "eval_steps" in allowed:
         args_dict["eval_steps"] = eval_every_steps
 
-    # 如果支持 load_best_model_at_end，但无法同时设置评估/保存策略，则关闭它以避免报错
+    # If load_best_model_at_end is supported but the evaluation/save strategy cannot be set at the same time, turn it off to avoid errors
     if "load_best_model_at_end" in allowed:
         want_load_best = args_dict.get("load_best_model_at_end", False)
         eval_set = args_dict.get("evaluation_strategy", None)
@@ -384,7 +383,7 @@ def main() -> None:
             args_dict["load_best_model_at_end"] = False
 
     training_args = TrainingArguments(**args_dict)
-    print("[Info] 训练参数要点:")
+    print("[Info] Key points of training parameters:")
     print(f"       epochs={args.num_epochs}, batch_size={args.batch_size}, lr={args.learning_rate}, weight_decay={args.weight_decay}")
     print(f"       max_length={args.max_length}, seed={args.seed}, fp16={args.fp16}")
     if "warmup_ratio" in allowed and "warmup_ratio" in args_dict:
@@ -417,19 +416,19 @@ def main() -> None:
         compute_metrics=compute_metrics_fn,
         callbacks=callbacks,
     )
-    # 设备与 GPU 信息
+    # Device and GPU information
     try:
         device_cnt = torch.cuda.device_count()
         dev_name = torch.cuda.get_device_name(0) if device_cnt > 0 else "cpu"
-        print(f"[Info] CUDA 可见设备数: {device_cnt}, 当前设备: {dev_name}, CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}")
+        print(f"[Info] Number of CUDA visible devices: {device_cnt}, current device: {dev_name}, CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}")
     except Exception:
         pass
 
-    print("[Info] 开始训练 ...")
+    print("[Info] Start training...")
 
     trainer.train()
 
-    # 保存
+    # save
     tokenizer.save_pretrained(output_dir)
     trainer.model.config.id2label = {int(i): str(l) for i, l in id2label.items()}
     trainer.model.config.label2id = {str(l): int(i) for l, i in label2id.items()}
@@ -438,7 +437,7 @@ def main() -> None:
         best_metric = getattr(trainer.state, "best_metric", None)
         best_ckpt = getattr(trainer.state, "best_model_checkpoint", None)
         if best_metric is not None and best_ckpt is not None:
-            print(f"[Info] 最优模型: metric={best_metric:.6f} | checkpoint={best_ckpt}")
+            print(f"[Info] Optimal model: metric={best_metric:.6f} | checkpoint={best_ckpt}")
     except Exception:
         pass
 
@@ -450,7 +449,7 @@ def main() -> None:
             indent=2,
         )
 
-    # 训练曲线：可选保存训练与评估 loss
+    # Training curve: optionally save training and evaluation loss
     try:
         import matplotlib.pyplot as plt  # type: ignore
         logs = trainer.state.log_history
@@ -478,7 +477,7 @@ def main() -> None:
     except Exception:
         pass
 
-    print(f"微调完成，模型已保存到: {output_dir}")
+    print(f"Fine-tuning is completed and the model has been saved to: {output_dir}")
 
 
 if __name__ == "__main__":

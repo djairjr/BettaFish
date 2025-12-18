@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 from enum import Enum
@@ -14,27 +14,27 @@ from typing import NamedTuple
 
 
 class FeedType(Enum):
-    # 推荐
+    # recommend
     RECOMMEND = "homefeed_recommend"
-    # 穿搭
+    # Outfit
     FASION = "homefeed.fashion_v3"
-    # 美食
+    # gourmet food
     FOOD = "homefeed.food_v3"
-    # 彩妆
+    # Makeup
     COSMETICS = "homefeed.cosmetics_v3"
-    # 影视
+    # Film and television
     MOVIE = "homefeed.movie_and_tv_v3"
-    # 职场
+    # workplace
     CAREER = "homefeed.career_v3"
-    # 情感
+    # emotion
     EMOTION = "homefeed.love_v3"
-    # 家居
+    # Home
     HOURSE = "homefeed.household_product_v3"
-    # 游戏
+    # game
     GAME = "homefeed.gaming_v3"
-    # 旅行
+    # travel
     TRAVEL = "homefeed.travel_v3"
-    # 健身
+    # fitness
     FITNESS = "homefeed.fitness_v3"
 
 

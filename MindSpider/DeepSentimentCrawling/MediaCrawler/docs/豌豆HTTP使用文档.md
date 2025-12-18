@@ -1,37 +1,37 @@
-## 豌豆HTTP代理使用文档 （只支持企业用户）
+## Wandou HTTP proxy usage documentation (only supports enterprise users)
 
-## 准备代理 IP 信息
-点击 <a href="https://h.wandouip.com?invite_code=rtnifi">豌豆HTTP代理</a> 官网注册并实名认证（国内使用代理 IP 必须要实名，懂的都懂）
+## Prepare proxy IP information
+Click <a href="https://h.wandouip.com?invite_code=rtnifi">Wandouip HTTP Proxy</a> to register on the official website and perform real-name authentication (real-name is required to use proxy IP in China, everyone knows it)
 
-## 获取 IP 代理的密钥信息 appkey
-从 <a href="https://h.wandouip.com?invite_code=rtnifi">豌豆HTTP代理</a> 官网获取免费试用，如下图所示
+## Get the key information of the IP proxy appkey
+Get a free trial from the <a href="https://h.wandouip.com?invite_code=rtnifi">Wandouip HTTP Proxy</a> official website, as shown below
 ![img.png](static/images/wd_http_img.png)
 
-选择自己需要的套餐
+Choose the package you need
 ![img_4.png](static/images/wd_http_img_4.png)
 
 
-初始化一个豌豆HTTP代理的示例，如下代码所示，需要1个参数： app_key
+An example of initializing a Wandou HTTP proxy, as shown in the following code, requires 1 parameter: app_key
 
 ```python
-# 文件地址： proxy/providers/wandou_http_proxy.py
+# File address: proxy/providers/wandou_http_proxy.py
 # -*- coding: utf-8 -*-
 
 def new_wandou_http_proxy() -> WanDouHttpProxy:
     """
-    构造豌豆HTTP实例
+Construct Wandou HTTP instance
     Returns:
 
     """
     return WanDouHttpProxy(
         app_key=os.getenv(
-            "wandou_app_key", "你的豌豆HTTP app_key"
-        ),  # 通过环境变量的方式获取豌豆HTTP app_key
+"wandou_app_key", "your pea HTTP app_key"
+), # Get Wandou HTTP app_key through environment variables
     )
 
 ```
 
-在个人中心的`开放接口`找到 `app_key`，如下图所示
+Find `app_key` in the `Open Interface` of the personal center, as shown in the figure below
 
 ![img_2.png](static/images/wd_http_img_2.png)
 

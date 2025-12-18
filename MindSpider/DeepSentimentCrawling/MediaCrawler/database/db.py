@@ -1,7 +1,7 @@
 # persist-1<persist1@126.com>
-# 原因：将 db.py 改造为模块，移除直接执行入口，修复相对导入问题。
-# 副作用：无
-# 回滚策略：还原此文件。
+# Reason: Transform db.py into a module, remove the direct execution entry, and fix the relative import problem.
+# Side effects: None
+# Rollback strategy: Restore this file.
 import asyncio
 import sys
 from pathlib import Path

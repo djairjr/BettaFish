@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 import asyncio
@@ -62,9 +62,9 @@ class KuaishouCrawler(AbstractCrawler):
             )
 
         async with async_playwright() as playwright:
-            # 根据配置选择启动模式
+            # Select startup mode based on configuration
             if config.ENABLE_CDP_MODE:
-                utils.logger.info("[KuaishouCrawler] 使用CDP模式启动浏览器")
+                utils.logger.info("[KuaishouCrawler] Launch the browser using CDP mode")
                 self.browser_context = await self.launch_browser_with_cdp(
                     playwright,
                     playwright_proxy_format,
@@ -72,7 +72,7 @@ class KuaishouCrawler(AbstractCrawler):
                     headless=config.CDP_HEADLESS,
                 )
             else:
-                utils.logger.info("[KuaishouCrawler] 使用标准模式启动浏览器")
+                utils.logger.info("[KuaishouCrawler] Launch the browser in standard mode")
                 # Launch a browser context.
                 chromium = playwright.chromium
                 self.browser_context = await self.launch_browser(
@@ -349,9 +349,7 @@ class KuaishouCrawler(AbstractCrawler):
         user_agent: Optional[str],
         headless: bool = True,
     ) -> BrowserContext:
-        """
-        使用CDP模式启动浏览器
-        """
+        """Launch the browser using CDP mode"""
         try:
             self.cdp_manager = CDPBrowserManager()
             browser_context = await self.cdp_manager.launch_and_connect(
@@ -361,17 +359,17 @@ class KuaishouCrawler(AbstractCrawler):
                 headless=headless,
             )
 
-            # 显示浏览器信息
+            # Show browser information
             browser_info = await self.cdp_manager.get_browser_info()
-            utils.logger.info(f"[KuaishouCrawler] CDP浏览器信息: {browser_info}")
+            utils.logger.info(f"[KuaishouCrawler] CDP browser information: {browser_info}")
 
             return browser_context
 
         except Exception as e:
             utils.logger.error(
-                f"[KuaishouCrawler] CDP模式启动失败，回退到标准模式: {e}"
+                f"[KuaishouCrawler] CDP mode startup failed and fell back to standard mode: {e}"
             )
-            # 回退到标准模式
+            # Fall back to standard mode
             chromium = playwright.chromium
             return await self.launch_browser(
                 chromium, playwright_proxy, user_agent, headless
@@ -426,7 +424,7 @@ class KuaishouCrawler(AbstractCrawler):
 
     async def close(self):
         """Close browser context"""
-        # 如果使用CDP模式，需要特殊处理
+        # If you use CDP mode, special processing is required
         if self.cdp_manager:
             await self.cdp_manager.cleanup()
             self.cdp_manager = None

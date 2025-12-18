@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-XGBoost情感分析模型训练脚本
-"""
+"""XGBoost sentiment analysis model training script"""
 import argparse
 import pandas as pd
 import numpy as np
@@ -15,26 +13,25 @@ from utils import stopwords
 
 
 class XGBoostModel(BaseModel):
-    """XGBoost情感分析模型"""
+    """XGBoost sentiment analysis model"""
     
     def __init__(self):
         super().__init__("XGBoost")
         
     def train(self, train_data: List[Tuple[str, int]], **kwargs) -> None:
-        """训练XGBoost模型
+        """Train XGBoost model
         
         Args:
-            train_data: 训练数据，格式为[(text, label), ...]
-            **kwargs: 其他参数，支持XGBoost的各种参数
-        """
-        print(f"开始训练 {self.model_name} 模型...")
+            train_data: training data in the format [(text, label), ...]
+            **kwargs: other parameters, supporting various parameters of XGBoost"""
+        print(f"Start training {self.model_name} model...")
         
-        # 准备数据
+        # Prepare data
         df_train = pd.DataFrame(train_data, columns=["words", "label"])
         
-        # 特征编码（词袋模型，限制特征数量）
+        # Feature encoding (bag-of-words model, limited number of features)
         max_features = kwargs.get('max_features', 2000)
-        print(f"构建词袋模型 (max_features={max_features})...")
+        print(f"Build a bag-of-words model (max_features={max_features})...")
         self.vectorizer = CountVectorizer(
             token_pattern=r'\[?\w+\]?', 
             stop_words=stopwords,
@@ -44,9 +41,9 @@ class XGBoostModel(BaseModel):
         X_train = self.vectorizer.fit_transform(df_train["words"])
         y_train = df_train["label"]
         
-        print(f"特征维度: {X_train.shape[1]}")
+        print(f"Feature dimension: {X_train.shape[1]}")
         
-        # XGBoost参数设置
+        # XGBoost parameter settings
         params = {
             'booster': kwargs.get('booster', 'gbtree'),
             'max_depth': kwargs.get('max_depth', 6),
@@ -60,84 +57,82 @@ class XGBoostModel(BaseModel):
         
         num_boost_round = kwargs.get('num_boost_round', 200)
         
-        print(f"训练XGBoost分类器...")
-        print(f"参数: {params}")
-        print(f"迭代轮数: {num_boost_round}")
+        print(f"Train XGBoost classifier...")
+        print(f"Parameters: {params}")
+        print(f"Number of iteration rounds: {num_boost_round}")
         
-        # 创建DMatrix
+        # Create DMatrix
         dmatrix = xgb.DMatrix(X_train, label=y_train)
         
-        # 训练模型
+        # Training model
         self.model = xgb.train(params, dmatrix, num_boost_round=num_boost_round)
         
         self.is_trained = True
-        print(f"{self.model_name} 模型训练完成！")
+        print(f"{self.model_name} Model training completed!")
         
     def predict(self, texts: List[str]) -> List[int]:
-        """预测文本情感
+        """Predict text sentiment
         
         Args:
-            texts: 待预测文本列表
+            texts: list of texts to be predicted
             
         Returns:
-            预测结果列表
-        """
+            Prediction result list"""
         if not self.is_trained:
-            raise ValueError(f"模型 {self.model_name} 尚未训练，请先调用train方法")
+            raise ValueError(f"The model {self.model_name} has not been trained yet, please call the train method first")
             
-        # 特征转换
+        # Feature transformation
         X = self.vectorizer.transform(texts)
         
-        # 创建DMatrix
+        # Create DMatrix
         dmatrix = xgb.DMatrix(X)
         
-        # 预测概率
+        # Predicted probability
         y_prob = self.model.predict(dmatrix)
         
-        # 转换为类别标签
+        # Convert to category labels
         y_pred = (y_prob > 0.5).astype(int)
         
         return y_pred.tolist()
     
     def predict_single(self, text: str) -> Tuple[int, float]:
-        """预测单条文本的情感
+        """Predicting the sentiment of a single text
         
         Args:
-            text: 待预测文本
+            text: text to be predicted
             
         Returns:
-            (predicted_label, confidence)
-        """
+            (predicted_label, confidence)"""
         if not self.is_trained:
-            raise ValueError(f"模型 {self.model_name} 尚未训练，请先调用train方法")
+            raise ValueError(f"The model {self.model_name} has not been trained yet, please call the train method first")
             
-        # 特征转换
+        # Feature transformation
         X = self.vectorizer.transform([text])
         
-        # 创建DMatrix
+        # Create DMatrix
         dmatrix = xgb.DMatrix(X)
         
-        # 预测概率
+        # Predicted probability
         prob = self.model.predict(dmatrix)[0]
         
-        # 转换为类别标签和置信度
+        # Convert to class labels and confidence
         prediction = int(prob > 0.5)
         confidence = prob if prediction == 1 else 1 - prob
         
         return prediction, float(confidence)
     
     def evaluate(self, test_data: List[Tuple[str, int]]) -> dict:
-        """评估模型性能，包含AUC指标"""
+        """Evaluate model performance, including AUC indicator"""
         if not self.is_trained:
-            raise ValueError(f"模型 {self.model_name} 尚未训练，请先调用train方法")
+            raise ValueError(f"The model {self.model_name} has not been trained yet, please call the train method first")
             
         texts = [item[0] for item in test_data]
         labels = [item[1] for item in test_data]
         
-        # 预测类别
+        # Prediction category
         predictions = self.predict(texts)
         
-        # 预测概率（用于计算AUC）
+        # Predicted probability (used to calculate AUC)
         X = self.vectorizer.transform(texts)
         dmatrix = xgb.DMatrix(X)
         probabilities = self.model.predict(dmatrix)
@@ -146,9 +141,9 @@ class XGBoostModel(BaseModel):
         f1 = f1_score(labels, predictions, average='weighted')
         auc = roc_auc_score(labels, probabilities)
         
-        print(f"\n{self.model_name} 模型评估结果:")
-        print(f"准确率: {accuracy:.4f}")
-        print(f"F1分数: {f1:.4f}")
+        print(f"\n{self.model_name} Model evaluation results:")
+        print(f"Accuracy: {accuracy:.4f}")
+        print(f"F1 score: {f1:.4f}")
         print(f"AUC: {auc:.4f}")
         
         return {
@@ -159,7 +154,7 @@ class XGBoostModel(BaseModel):
 
 
 def main():
-    """主函数"""
+    """main function"""
     parser = argparse.ArgumentParser(description='XGBoost情感分析模型训练')
     parser.add_argument('--train_path', type=str, default='./data/weibo2018/train.txt',
                         help='训练数据路径')
@@ -180,25 +175,25 @@ def main():
     
     args = parser.parse_args()
     
-    # 创建模型
+    # Create model
     model = XGBoostModel()
     
     if args.eval_only:
-        # 仅评估模式
-        print("评估模式：加载已有模型进行评估")
+        # Evaluate mode only
+        print("Evaluation mode: Load an existing model for evaluation")
         model.load_model(args.model_path)
         
-        # 加载测试数据
+        # Load test data
         _, test_data = BaseModel.load_data(args.train_path, args.test_path)
         
-        # 评估模型
+        # Evaluation model
         model.evaluate(test_data)
     else:
-        # 训练模式
-        # 加载数据
+        # training mode
+        # Load data
         train_data, test_data = BaseModel.load_data(args.train_path, args.test_path)
         
-        # 训练模型
+        # Training model
         model.train(
             train_data,
             max_features=args.max_features,
@@ -207,25 +202,25 @@ def main():
             num_boost_round=args.num_boost_round
         )
         
-        # 评估模型
+        # Evaluation model
         model.evaluate(test_data)
         
-        # 保存模型
+        # Save model
         model.save_model(args.model_path)
         
-        # 示例预测
-        print("\n示例预测:")
+        # Example forecast
+        print("\nExample prediction:")
         test_texts = [
-            "今天天气真好，心情很棒",
-            "这部电影太无聊了，浪费时间",
-            "哈哈哈，太有趣了"
+            "The weather is so nice today, I feel great",
+            "This movie is so boring and a waste of time",
+            "Hahaha, so funny"
         ]
         
         for text in test_texts:
             pred, conf = model.predict_single(text)
-            sentiment = "正面" if pred == 1 else "负面"
-            print(f"文本: {text}")
-            print(f"预测: {sentiment} (置信度: {conf:.4f})")
+            sentiment = "front" if pred == 1 else "Negative"
+            print(f"Text: {text}")
+            print(f"Prediction: {sentiment} (Confidence: {conf:.4f})")
             print()
 
 

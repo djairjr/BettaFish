@@ -1,8 +1,8 @@
 // copy from https://github.com/tiam-bloom/zhihuQuestionAnswer/blob/main/zhihuvmp.js thanks to tiam-bloom
-// 仅供学习交流使用，严禁用于商业用途，也不要滥用，否则后果自负
+// for_learning_and_communication_purposes_only，commercial_use_strictly_prohibited，dont_abuse_it_either，otherwise_you_will_be_responsible_for_the_consequences
 // modified by relakkes
 
-const crypto = require('crypto'); // 导入加密模块
+const crypto = require('crypto'); // import_encryption_module
 
 
 let init_str = "6fpLRqJO8M/c3jnYxFkUVC4ZIG12SiH=5v0mXDazWBTsuw7QetbKdoPyAl+hN9rgE";
@@ -135,7 +135,7 @@ function get_zse_96(encode_md5) {
 /***********************relakkes modify*******************************************************/
 
 /**
- * 从cookies中提取dc0的值
+ * extract_the_value_of_dc0_from_cookies
  * @param cookies
  * @returns {string}
  */
@@ -147,9 +147,9 @@ const extract_dc0_value_from_cookies = function (cookies) {
 }
 
 /**
- * 获取zhihu sign value 对python暴漏的接口
- * @param url 请求的路由参数
- * @param cookies 请求的cookies，需要包含dc0这个key
+ * get_zhihu sign value exposed_interface_to_python
+ * @param url requested_routing_parameters
+ * @param cookies requested_cookies，need_to_include_the_key_dc0
  * @returns {*}
  */
 function get_sign(url, cookies) {

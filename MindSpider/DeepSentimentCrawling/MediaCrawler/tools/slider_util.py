@@ -1,18 +1,18 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2023/12/2 12:55
-# @Desc    : 滑块相关的工具包
+# @Desc: Slider related toolkit
 import os
 from typing import List
 from urllib.parse import urlparse
@@ -28,10 +28,8 @@ class Slide:
     update: relakkes
     """
     def __init__(self, gap, bg, gap_size=None, bg_size=None, out=None):
-        """
-        :param gap: 缺口图片链接或者url
-        :param bg: 带缺口的图片链接或者url
-        """
+        """:param gap: gap image link or url
+        :param bg: gapped image link or url"""
         self.img_dir = os.path.join(os.getcwd(), 'temp_image')
         if not os.path.exists(self.img_dir):
             os.makedirs(self.img_dir)
@@ -67,13 +65,13 @@ class Slide:
                 cv2.imwrite(img_path, image)
                 return img_path
             else:
-                raise Exception(f"保存{img_type}图片失败")
+                raise Exception(f"Failed to save {img_type} image")
         else:
             return img
 
     @staticmethod
     def clear_white(img):
-        """清除图片的空白区域，这里主要清除滑块的空白"""
+        """Clear the blank area of ​​the picture. Here we mainly clear the blank area of ​​the slider."""
         img = cv2.imread(img)
         rows, cols, channel = img.shape
         min_x = 255
@@ -99,16 +97,16 @@ class Slide:
     def template_match(self, tpl, target):
         th, tw = tpl.shape[:2]
         result = cv2.matchTemplate(target, tpl, cv2.TM_CCOEFF_NORMED)
-        # 寻找矩阵(一维数组当作向量,用Mat定义) 中最小值和最大值的位置
+        # Find the position of the minimum and maximum values ​​in the matrix (one-dimensional array is treated as a vector, defined with Mat)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         tl = max_loc
         br = (tl[0] + tw, tl[1] + th)
-        # 绘制矩形边框，将匹配区域标注出来
-        # target：目标图像
-        # tl：矩形定点
-        # br：矩形的宽高
-        # (0,0,255)：矩形边框颜色
-        # 1：矩形边框大小
+        # Draw a rectangular border and mark the matching area
+        # target: target image
+        # tl: rectangular fixed point
+        # br: width and height of the rectangle
+        # (0,0,255): Rectangle border color
+        # 1: Rectangular border size
         cv2.rectangle(target, tl, br, (0, 0, 255), 2)
         cv2.imwrite(self.out, target)
         return tl[0]
@@ -129,39 +127,39 @@ class Slide:
         slide_pic = cv2.cvtColor(slide, cv2.COLOR_GRAY2RGB)
         back_pic = cv2.cvtColor(back, cv2.COLOR_GRAY2RGB)
         x = self.template_match(slide_pic, back_pic)
-        # 输出横坐标, 即 滑块在图片上的位置
+        # Output the abscissa, that is, the position of the slider on the picture
         return x
 
 
 def get_track_simple(distance) -> List[int]:
-    # 有的检测移动速度的 如果匀速移动会被识别出来，来个简单点的 渐进
-    # distance为传入的总距离
-    # 移动轨迹
+    # Some detect moving speed. If it moves at a constant speed, it will be recognized. Let's do a simpler gradual process.
+    # distance is the total distance passed in
+    # Movement trajectory
     track: List[int] = []
-    # 当前位移
+    # current displacement
     current = 0
-    # 减速阈值
+    # deceleration threshold
     mid = distance * 4 / 5
-    # 计算间隔
+    # Calculation interval
     t = 0.2
-    # 初速度
+    # initial velocity
     v = 1
 
     while current < distance:
         if current < mid:
-            # 加速度为2
+            # acceleration is 2
             a = 4
         else:
-            # 加速度为-2
+            # The acceleration is -2
             a = -3
         v0 = v
-        # 当前速度
+        # current speed
         v = v0 + a * t  # type: ignore
-        # 移动距离
+        # Moving distance
         move = v0 * t + 1 / 2 * a * t * t
-        # 当前位移
+        # current displacement
         current += move  # type: ignore
-        # 加入轨迹
+        # Join track
         track.append(round(move))
     return track
 

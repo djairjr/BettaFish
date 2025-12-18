@@ -1,8 +1,6 @@
-"""
-Report Engine工具模块。
+"""Report Engine tool module.
 
-当前主要暴露配置读取逻辑，后续可扩展更多通用工具。
-"""
+Currently, it mainly exposes configuration reading logic, and more general tools can be expanded in the future."""
 
 from ReportEngine.utils.chart_review_service import (
     ChartReviewService,

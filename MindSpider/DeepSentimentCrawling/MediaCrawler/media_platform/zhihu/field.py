@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 from enum import Enum
@@ -16,32 +16,26 @@ from constant import zhihu as zhihu_constant
 
 
 class SearchTime(Enum):
-    """
-    搜索时间范围
-    """
-    DEFAULT = ""  # 不限时间
-    ONE_DAY = "a_day"  # 一天内
-    ONE_WEEK = "a_week"  # 一周内
-    ONE_MONTH = "a_month"  # 一个月内
-    THREE_MONTH = "three_months"  # 三个月内
-    HALF_YEAR = "half_a_year"  # 半年内
-    ONE_YEAR = "a_year"  # 一年内
+    """Search time range"""
+    DEFAULT = ""  # No time limit
+    ONE_DAY = "a_day"  # within one day
+    ONE_WEEK = "a_week"  # within a week
+    ONE_MONTH = "a_month"  # within a month
+    THREE_MONTH = "three_months"  # within three months
+    HALF_YEAR = "half_a_year"  # Within half a year
+    ONE_YEAR = "a_year"  # within one year
 
 
 class SearchType(Enum):
-    """
-    搜索结果类型
-    """
-    DEFAULT = ""  # 不限类型
-    ANSWER = zhihu_constant.ANSWER_NAME  # 只看回答
-    ARTICLE = zhihu_constant.ARTICLE_NAME  # 只看文章
-    VIDEO = zhihu_constant.VIDEO_NAME  # 只看视频
+    """Search result type"""
+    DEFAULT = ""  # Any type
+    ANSWER = zhihu_constant.ANSWER_NAME  # Only look at answers
+    ARTICLE = zhihu_constant.ARTICLE_NAME  # Just read the article
+    VIDEO = zhihu_constant.VIDEO_NAME  # Just watch the video
 
 
 class SearchSort(Enum):
-    """
-    搜索结果排序
-    """
-    DEFAULT = ""  # 综合排序
-    UPVOTED_COUNT = "upvoted_count"  # 最多赞同
-    CREATE_TIME = "created_time"  # 最新发布
+    """Search results sorting"""
+    DEFAULT = ""  # Comprehensive sorting
+    UPVOTED_COUNT = "upvoted_count"  # Most agree
+    CREATE_TIME = "created_time"  # Latest releases

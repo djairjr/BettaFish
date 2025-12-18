@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 import asyncio
@@ -42,10 +42,8 @@ class DouYinLogin(AbstractLogin):
         self.cookie_str = cookie_str
 
     async def begin(self):
-        """
-            Start login douyin website
-            滑块中间页面的验证准确率不太OK... 如果没有特俗要求，建议不开抖音登录，或者使用cookies登录
-        """
+        """Start login douyin website
+            The verification accuracy of the page in the middle of the slider is not very good... If there are no special requirements, it is recommended to log in without opening Douyin, or use cookies to log in."""
 
         # popup login dialog
         await self.popup_login_dialog()
@@ -60,10 +58,10 @@ class DouYinLogin(AbstractLogin):
         else:
             raise ValueError("[DouYinLogin.begin] Invalid Login Type Currently only supported qrcode or phone or cookie ...")
 
-        # 如果页面重定向到滑动验证码页面，需要再次滑动滑块
+        # If the page redirects to the sliding verification code page, you need to slide the slider again
         await asyncio.sleep(6)
         current_page_title = await self.context_page.title()
-        if "验证码中间页" in current_page_title:
+        if "Verification code intermediate page" in current_page_title:
             await self.check_page_display_slider(move_step=3, slider_level="hard")
 
         # check login state
@@ -108,7 +106,7 @@ class DouYinLogin(AbstractLogin):
         except Exception as e:
             utils.logger.error(f"[DouYinLogin.popup_login_dialog] login dialog box does not pop up automatically, error: {e}")
             utils.logger.info("[DouYinLogin.popup_login_dialog] login dialog box does not pop up automatically, we will manually click the login button")
-            login_button_ele = self.context_page.locator("xpath=//p[text() = '登录']")
+            login_button_ele = self.context_page.locator("xpath=//p[text() = 'Login']")
             await login_button_ele.click()
             await asyncio.sleep(0.5)
 
@@ -129,19 +127,19 @@ class DouYinLogin(AbstractLogin):
 
     async def login_by_mobile(self):
         utils.logger.info("[DouYinLogin.login_by_mobile] Begin login douyin by mobile ...")
-        mobile_tap_ele = self.context_page.locator("xpath=//li[text() = '验证码登录']")
+        mobile_tap_ele = self.context_page.locator("xpath=//li[text() = 'Verification code login']")
         await mobile_tap_ele.click()
         await self.context_page.wait_for_selector("xpath=//article[@class='web-login-mobile-code']")
-        mobile_input_ele = self.context_page.locator("xpath=//input[@placeholder='手机号']")
+        mobile_input_ele = self.context_page.locator("xpath=//input[@placeholder='Mobile phone number']")
         await mobile_input_ele.fill(self.login_phone)
         await asyncio.sleep(0.5)
-        send_sms_code_btn = self.context_page.locator("xpath=//span[text() = '获取验证码']")
+        send_sms_code_btn = self.context_page.locator("xpath=//span[text() = 'Get verification code']")
         await send_sms_code_btn.click()
 
-        # 检查是否有滑动验证码
+        # Check if there is a sliding verification code
         await self.check_page_display_slider(move_step=10, slider_level="easy")
         cache_client = CacheFactory.create_cache(config.CACHE_TYPE_MEMORY)
-        max_get_sms_code_time = 60 * 2  # 最长获取验证码的时间为2分钟
+        max_get_sms_code_time = 60 * 2  # The maximum time to obtain the verification code is 2 minutes
         while max_get_sms_code_time > 0:
             utils.logger.info(f"[DouYinLogin.login_by_mobile] get douyin sms code from redis remaining time {max_get_sms_code_time}s ...")
             await asyncio.sleep(1)
@@ -151,24 +149,22 @@ class DouYinLogin(AbstractLogin):
                 max_get_sms_code_time -= 1
                 continue
 
-            sms_code_input_ele = self.context_page.locator("xpath=//input[@placeholder='请输入验证码']")
+            sms_code_input_ele = self.context_page.locator("xpath=//input[@placeholder='Please enter the verification code']")
             await sms_code_input_ele.fill(value=sms_code_value.decode())
             await asyncio.sleep(0.5)
             submit_btn_ele = self.context_page.locator("xpath=//button[@class='web-login-button']")
-            await submit_btn_ele.click()  # 点击登录
-            # todo ... 应该还需要检查验证码的正确性有可能输入的验证码不正确
+            await submit_btn_ele.click()  # Click to log in
+            # todo... You should also check the correctness of the verification code. It is possible that the verification code entered is incorrect.
             break
 
     async def check_page_display_slider(self, move_step: int = 10, slider_level: str = "easy"):
-        """
-        检查页面是否出现滑动验证码
-        :return:
-        """
-        # 等待滑动验证码的出现
+        """Check whether the sliding verification code appears on the page
+        :return:"""
+        # Wait for the sliding verification code to appear
         back_selector = "#captcha-verify-image"
         try:
             await self.context_page.wait_for_selector(selector=back_selector, state="visible", timeout=30 * 1000)
-        except PlaywrightTimeoutError:  # 没有滑动验证码，直接返回
+        except PlaywrightTimeoutError:  # There is no sliding verification code, return directly
             return
 
         gap_selector = 'xpath=//*[@id="captcha_container"]/div/div[2]/img[2]'
@@ -182,16 +178,16 @@ class DouYinLogin(AbstractLogin):
                 await self.move_slider(back_selector, gap_selector, move_step, slider_level)
                 await asyncio.sleep(1)
 
-                # 如果滑块滑动慢了，或者验证失败了，会提示操作过慢，这里点一下刷新按钮
+                # If the slider slides slowly or the verification fails, it will prompt that the operation is too slow. Click the refresh button here.
                 page_content = await self.context_page.content()
-                if "操作过慢" in page_content or "提示重新操作" in page_content:
+                if "Operation too slow" in page_content or "Prompt to re-operate" in page_content:
                     utils.logger.info("[DouYinLogin.check_page_display_slider] slider verify failed, retry ...")
                     await self.context_page.click(selector="//a[contains(@class, 'secsdk_captcha_refresh')]")
                     continue
 
-                # 滑动成功后，等待滑块消失
+                # After sliding successfully, wait for the slider to disappear
                 await self.context_page.wait_for_selector(selector=back_selector, state="hidden", timeout=1000)
-                # 如果滑块消失了，说明验证成功了，跳出循环，如果没有消失，说明验证失败了，上面这一行代码会抛出异常被捕获后继续循环滑动验证码
+                # If the slider disappears, it means that the verification is successful and jumps out of the loop. If it does not disappear, it means that the verification fails. The above line of code will throw an exception and continue to slide the verification code in the loop after being caught.
                 utils.logger.info("[DouYinLogin.check_page_display_slider] slider verify success ...")
                 slider_verify_success = True
             except Exception as e:
@@ -202,14 +198,12 @@ class DouYinLogin(AbstractLogin):
                 continue
 
     async def move_slider(self, back_selector: str, gap_selector: str, move_step: int = 10, slider_level="easy"):
-        """
-        Move the slider to the right to complete the verification
-        :param back_selector: 滑动验证码背景图片的选择器
-        :param gap_selector:  滑动验证码的滑块选择器
-        :param move_step: 是控制单次移动速度的比例是1/10 默认是1 相当于 传入的这个距离不管多远0.1秒钟移动完 越大越慢
-        :param slider_level: 滑块难度 easy hard,分别对应手机验证码的滑块和验证码中间的滑块
-        :return:
-        """
+        """Move the slider to the right to complete the verification
+        :param back_selector: Selector for sliding verification code background image
+        :param gap_selector: Slider selector for sliding verification code
+        :param move_step: The ratio that controls the speed of a single move is 1/10. The default is 1, which is equivalent to the distance passed in. No matter how far it is, the move will be completed in 0.1 seconds. The larger the speed, the slower it will be.
+        :param slider_level: slider difficulty easy hard, corresponding to the slider of the mobile phone verification code and the slider in the middle of the verification code respectively
+        :return:"""
 
         # get slider background image
         slider_back_elements = await self.context_page.wait_for_selector(
@@ -225,31 +219,31 @@ class DouYinLogin(AbstractLogin):
         )
         gap_src = str(await gap_elements.get_property("src")) # type: ignore
 
-        # 识别滑块位置
+        # Identify slider position
         slide_app = utils.Slide(gap=gap_src, bg=slide_back)
         distance = slide_app.discern()
 
-        # 获取移动轨迹
+        # Get movement track
         tracks = utils.get_tracks(distance, slider_level)
         new_1 = tracks[-1] - (sum(tracks) - distance)
         tracks.pop()
         tracks.append(new_1)
 
-        # 根据轨迹拖拽滑块到指定位置
+        # Drag the slider to the specified position according to the trajectory
         element = await self.context_page.query_selector(gap_selector)
         bounding_box = await element.bounding_box() # type: ignore
 
         await self.context_page.mouse.move(bounding_box["x"] + bounding_box["width"] / 2, # type: ignore
                                            bounding_box["y"] + bounding_box["height"] / 2) # type: ignore
-        # 这里获取到x坐标中心点位置
+        # Here we get the x coordinate center point position
         x = bounding_box["x"] + bounding_box["width"] / 2 # type: ignore
-        # 模拟滑动操作
+        # Simulate sliding operation
         await element.hover() # type: ignore
         await self.context_page.mouse.down()
 
         for track in tracks:
-            # 循环鼠标按照轨迹移动
-            # steps 是控制单次移动速度的比例是1/10 默认是1 相当于 传入的这个距离不管多远0.1秒钟移动完 越大越慢
+            # Cycle the mouse to move along the trajectory
+            # steps is the ratio that controls the speed of a single movement. It is 1/10. The default is 1. It is equivalent to the distance passed in. No matter how far it is, the movement will be completed in 0.1 seconds. The larger the speed, the slower it will be.
             await self.context_page.mouse.move(x + track, 0, steps=move_step)
             x += track
         await self.context_page.mouse.up()

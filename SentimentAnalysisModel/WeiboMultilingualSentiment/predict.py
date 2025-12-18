@@ -3,58 +3,58 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipe
 import re
 
 def preprocess_text(text):
-    """简单的文本预处理，适用于多语言文本"""
+    """Simple text preprocessing for multilingual text"""
     return text
 
 def main():
-    print("正在加载多语言情感分析模型...")
+    print("Loading multilingual sentiment analysis model...")
     
-    # 使用多语言情感分析模型
+    # Use multilingual sentiment analysis models
     model_name = "tabularisai/multilingual-sentiment-analysis"
     local_model_path = "./model"
     
     try:
-        # 检查本地是否已有模型
+        # Check if the model already exists locally
         import os
         if os.path.exists(local_model_path):
-            print("从本地加载模型...")
+            print("Load model from local...")
             tokenizer = AutoTokenizer.from_pretrained(local_model_path)
             model = AutoModelForSequenceClassification.from_pretrained(local_model_path)
         else:
-            print("首次使用，正在下载模型到本地...")
-            # 下载并保存到本地
+            print("First time use, downloading model to local...")
+            # Download and save locally
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             model = AutoModelForSequenceClassification.from_pretrained(model_name)
             
-            # 保存到本地
+            # Save to local
             tokenizer.save_pretrained(local_model_path)
             model.save_pretrained(local_model_path)
-            print(f"模型已保存到: {local_model_path}")
+            print(f"Model saved to: {local_model_path}")
         
-        # 设置设备
+        # Set up the device
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model.to(device)
         model.eval()
-        print(f"模型加载成功! 使用设备: {device}")
+        print(f"Model loaded successfully! Device used: {device}")
         
-        # 情感标签映射（5级分类）
+        # Sentiment label mapping (5-level classification)
         sentiment_map = {
-            0: "非常负面", 1: "负面", 2: "中性", 3: "正面", 4: "非常正面"
+            0: "very negative", 1: "Negative", 2: "neutral", 3: "front", 4: "Very positive"
         }
         
     except Exception as e:
-        print(f"模型加载失败: {e}")
-        print("请检查网络连接")
+        print(f"Model loading failed: {e}")
+        print("Please check network connection")
         return
     
-    print("\n============= 多语言情感分析 =============")
-    print("支持语言: 中文、英文、西班牙文、阿拉伯文、日文、韩文等22种语言")
-    print("情感等级: 非常负面、负面、中性、正面、非常正面")
-    print("输入文本进行分析 (输入 'q' 退出):")
-    print("输入 'demo' 查看多语言示例")
+    print("\n============== Multi-language sentiment analysis =============")
+    print("Supported languages: 22 languages ​​including Chinese, English, Spanish, Arabic, Japanese, and Korean")
+    print("Sentiment scale: very negative, negative, neutral, positive, very positive")
+    print("Enter text for analysis (type 'q' to exit):")
+    print("Type 'demo' to see multilingual examples")
     
     while True:
-        text = input("\n请输入文本: ")
+        text = input("\nPlease enter text:")
         if text.lower() == 'q':
             break
         
@@ -63,14 +63,14 @@ def main():
             continue
         
         if not text.strip():
-            print("输入不能为空，请重新输入")
+            print("The input cannot be empty, please re-enter")
             continue
         
         try:
-            # 预处理文本
+            # Preprocess text
             processed_text = preprocess_text(text)
             
-            # 分词编码
+            # word segmentation coding
             inputs = tokenizer(
                 processed_text,
                 max_length=512,
@@ -79,57 +79,57 @@ def main():
                 return_tensors='pt'
             )
             
-            # 转移到设备
+            # Transfer to device
             inputs = {k: v.to(device) for k, v in inputs.items()}
             
-            # 预测
+            # predict
             with torch.no_grad():
                 outputs = model(**inputs)
                 logits = outputs.logits
                 probabilities = torch.softmax(logits, dim=1)
                 prediction = torch.argmax(probabilities, dim=1).item()
             
-            # 输出结果
+            # Output results
             confidence = probabilities[0][prediction].item()
             label = sentiment_map[prediction]
             
-            print(f"预测结果: {label} (置信度: {confidence:.4f})")
+            print(f"Prediction result: {label} (Confidence: {confidence:.4f})")
             
-            # 显示所有类别的概率
-            print("详细概率分布:")
+            # Show probabilities for all categories
+            print("Detailed probability distribution:")
             for i, (label_name, prob) in enumerate(zip(sentiment_map.values(), probabilities[0])):
                 print(f"  {label_name}: {prob:.4f}")
             
         except Exception as e:
-            print(f"预测时发生错误: {e}")
+            print(f"An error occurred while predicting: {e}")
             continue
 
 def show_multilingual_demo(tokenizer, model, device, sentiment_map):
-    """展示多语言情感分析示例"""
-    print("\n=== 多语言情感分析示例 ===")
+    """Showcase multilingual sentiment analysis example"""
+    print("\n=== Multi-language sentiment analysis example ===")
     
     demo_texts = [
-        # 中文
-        ("今天天气真好，心情特别棒！", "中文"),
-        ("这家餐厅的菜味道非常棒！", "中文"),
-        ("服务态度太差了，很失望", "中文"),
+        # Chinese
+        ("The weather is so nice today, and I’m in a great mood!", "Chinese"),
+        ("The food at this restaurant tastes great!", "Chinese"),
+        ("The service attitude is so bad, I am very disappointed", "Chinese"),
         
-        # 英文
-        ("I absolutely love this product!", "英文"),
-        ("The customer service was disappointing.", "英文"),
-        ("The weather is fine, nothing special.", "英文"),
+        # English
+        ("I absolutely love this product!", "English"),
+        ("The customer service was disappointing.", "English"),
+        ("The weather is fine, nothing special.", "English"),
         
-        # 日文
-        ("このレストランの料理は本当に美味しいです！", "日文"),
-        ("このホテルのサービスはがっかりしました。", "日文"),
+        # Japanese
+        ("It's a delicious dish that's delicious!", "Japanese"),
+        ("このホテルのサービスはがっかりしました。", "Japanese"),
         
-        # 韩文
-        ("이 가게의 케이크는 정말 맛있어요！", "韩文"),
-        ("서비스가 너무 별로였어요。", "韩文"),
+        # Korean
+        ("이 가게의 케이크는 정말 맛있어요！", "Korean"),
+        ("서비스가 너무 별로였어요。", "Korean"),
         
-        # 西班牙文
-        ("¡Me encanta cómo quedó la decoración!", "西班牙文"),
-        ("El servicio fue terrible y muy lento.", "西班牙文"),
+        # spanish
+        ("¡Me encanta cómo quedó la decoración!", "spanish"),
+        ("El servicio fue terrible y muy lento.", "spanish"),
     ]
     
     for text, language in demo_texts:
@@ -154,12 +154,12 @@ def show_multilingual_demo(tokenizer, model, device, sentiment_map):
             label = sentiment_map[prediction]
             
             print(f"\n{language}: {text}")
-            print(f"结果: {label} (置信度: {confidence:.4f})")
+            print(f"Result: {label} (Confidence: {confidence:.4f})")
             
         except Exception as e:
-            print(f"处理 {text} 时出错: {e}")
+            print(f"Error processing {text}: {e}")
     
-    print("\n=== 示例结束 ===")
+    print("\n=== End of example ===")
     
     '''
     正在加载多语言情感分析模型...

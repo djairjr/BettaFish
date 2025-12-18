@@ -1,17 +1,17 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 # -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2023/12/2 13:45
-# @Desc    : ip代理池实现
+# @Desc: ip proxy pool implementation
 import random
 from typing import Dict, List
 
@@ -41,31 +41,26 @@ class ProxyIpPool:
             enable_validate_ip:
             ip_provider:
         """
-        self.valid_ip_url = "https://echo.apifox.cn/"  # 验证 IP 是否有效的地址
+        self.valid_ip_url = "https://echo.apifox.cn/"  # Verify that the IP is a valid address
         self.ip_pool_count = ip_pool_count
         self.enable_validate_ip = enable_validate_ip
         self.proxy_list: List[IpInfoModel] = []
         self.ip_provider: ProxyProvider = ip_provider
 
     async def load_proxies(self) -> None:
-        """
-        加载IP代理
-        Returns:
-
-        """
+        """Load IP proxy
+        Returns:"""
         self.proxy_list = await self.ip_provider.get_proxy(self.ip_pool_count)
 
     async def _is_valid_proxy(self, proxy: IpInfoModel) -> bool:
-        """
-        验证代理IP是否有效
+        """Verify that the proxy IP is valid
         :param proxy:
-        :return:
-        """
+        :return:"""
         utils.logger.info(
             f"[ProxyIpPool._is_valid_proxy] testing {proxy.ip} is it valid "
         )
         try:
-            # httpx 0.28.1 需要直接传入代理URL字符串，而不是字典
+            # httpx 0.28.1 needs to pass in the proxy URL string directly instead of a dictionary
             if proxy.user and proxy.password:
                 proxy_url = f"http://{proxy.user}:{proxy.password}@{proxy.ip}:{proxy.port}"
             else:
@@ -85,15 +80,13 @@ class ProxyIpPool:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
     async def get_proxy(self) -> IpInfoModel:
-        """
-        从代理池中随机提取一个代理IP
-        :return:
-        """
+        """Randomly extract a proxy IP from the proxy pool
+        :return:"""
         if len(self.proxy_list) == 0:
             await self._reload_proxies()
 
         proxy = random.choice(self.proxy_list)
-        self.proxy_list.remove(proxy)  # 取出来一个IP就应该移出掉
+        self.proxy_list.remove(proxy)  # Once an IP is taken out, it should be removed.
         if self.enable_validate_ip:
             if not await self._is_valid_proxy(proxy):
                 raise Exception(
@@ -102,9 +95,8 @@ class ProxyIpPool:
         return proxy
 
     async def _reload_proxies(self):
-        """
-        # 重新加载代理池
-        :return:
+        """# Reload the proxy pool
+        :return:"
         """
         self.proxy_list = []
         await self.load_proxies()
@@ -117,12 +109,10 @@ IpProxyProvider: Dict[str, ProxyProvider] = {
 
 
 async def create_ip_pool(ip_pool_count: int, enable_validate_ip: bool) -> ProxyIpPool:
-    """
-     创建 IP 代理池
-    :param ip_pool_count: ip池子的数量
-    :param enable_validate_ip: 是否开启验证IP代理
-    :return:
-    """
+    """Create IP proxy pool
+    :param ip_pool_count: the number of ip pools
+    :param enable_validate_ip: Whether to enable the verification IP proxy
+    :return:"""
     pool = ProxyIpPool(
         ip_pool_count=ip_pool_count,
         enable_validate_ip=enable_validate_ip,

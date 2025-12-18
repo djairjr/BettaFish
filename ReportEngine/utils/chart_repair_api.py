@@ -1,9 +1,7 @@
-"""
-图表API修复模块。
+"""Chart API fix module.
 
-提供调用4个Engine（ReportEngine, ForumEngine, InsightEngine, MediaEngine）的LLM API
-来修复图表数据的功能。
-"""
+Provides LLM API for calling 4 Engines (ReportEngine, ForumEngine, InsightEngine, MediaEngine)
+to fix the functionality of chart data."""
 
 from __future__ import annotations
 
@@ -14,15 +12,14 @@ from loguru import logger
 from ReportEngine.utils.config import settings
 
 
-# 图表修复提示词
-CHART_REPAIR_SYSTEM_PROMPT = """你是一个专业的图表数据修复助手。你的任务是修复Chart.js图表数据中的格式错误，确保图表能够正常渲染。
+# Chart repair tips
+CHART_REPAIR_SYSTEM_PROMPT = """You are a professional chart data repair assistant. Your task is to fix formatting errors in Chart.js chart data and ensure that the chart can be rendered normally.
 
-**Chart.js标准数据格式：**
+**Chart.js standard data format:**
 
-1. 标准图表（line, bar, pie, doughnut, radar, polarArea）：
+1. Standard charts (line, bar, pie, doughnut, radar, polarArea):
 ```json
-{
-  "type": "widget",
+{"type": "widget",
   "widgetType": "chart.js/bar",
   "widgetId": "chart-001",
   "props": {
@@ -49,10 +46,9 @@ CHART_REPAIR_SYSTEM_PROMPT = """你是一个专业的图表数据修复助手。
 }
 ```
 
-2. 特殊图表（scatter, bubble）：
+2. Special charts (scatter, bubble):
 ```json
-{
-  "data": {
+{"data": {
     "datasets": [
       {
         "label": "系列1",
@@ -66,31 +62,29 @@ CHART_REPAIR_SYSTEM_PROMPT = """你是一个专业的图表数据修复助手。
 }
 ```
 
-**修复原则：**
-1. **宁愿不改，也不要改错** - 如果不确定如何修复，保持原始数据
-2. **最小改动** - 只修复明确的错误，不要过度修改
-3. **保持数据完整性** - 不要丢失原始数据
-4. **验证修复结果** - 确保修复后符合Chart.js格式
+**Repair Principles:**
+1. **Rather no changes than fix errors** - If you are not sure how to fix it, keep the original data
+2. **MINIMAL CHANGES** - Only fix clear bugs, don’t overdo it
+3. **Maintain Data Integrity** - Don’t lose the original data
+4. **Verify the repair results** - Ensure that the repair complies with the Chart.js format
 
-**常见错误及修复方法：**
-1. 缺少labels字段 → 根据数据生成默认labels
-2. datasets不是数组 → 转换为数组格式
-3. 数据长度不匹配 → 截断或补null
-4. 非数值数据 → 尝试转换或设为null
-5. 缺少必需字段 → 添加默认值
+**Common errors and how to fix them:**
+1. Missing labels field → generate default labels based on data
+2. datasets are not arrays → convert to array format
+3. Data length does not match → truncate or fill in null
+4. Non-numeric data → try to convert or set to null
+5. Missing required fields → Add default value
 
-请根据错误信息修复图表数据，并返回修复后的完整widget block（JSON格式）。
-"""
+Please repair the chart data according to the error information and return the repaired complete widget block (JSON format)."""
 
 
-# 表格修复提示词
-TABLE_REPAIR_SYSTEM_PROMPT = """你是一个专业的表格数据修复助手。你的任务是修复IR表格数据中的格式错误，确保表格能够正常渲染。
+# Table repair prompts
+TABLE_REPAIR_SYSTEM_PROMPT = """You are a professional table data repair assistant. Your task is to fix format errors in the IR table data and ensure that the table renders properly.
 
-**标准表格数据格式：**
+**Standard tabular data format:**
 
 ```json
-{
-  "type": "table",
+{"type": "table",
   "rows": [
     {
       "cells": [
@@ -138,14 +132,13 @@ TABLE_REPAIR_SYSTEM_PROMPT = """你是一个专业的表格数据修复助手。
 }
 ```
 
-**⚠️ 常见错误：嵌套 cells 结构**
+**⚠️ Common mistake: nested cells structure**
 
-这是一个非常常见的错误，LLM 经常把同级的 cells 错误地嵌套起来：
+This is a very common mistake. LLM often nests cells at the same level incorrectly:
 
-❌ **错误示例：**
+❌ **Error Example:**
 ```json
-{
-  "cells": [
+{"cells": [
     { "blocks": [...], "colspan": 1 },
     { "cells": [
         { "blocks": [...] },
@@ -156,10 +149,9 @@ TABLE_REPAIR_SYSTEM_PROMPT = """你是一个专业的表格数据修复助手。
 }
 ```
 
-✅ **正确格式：**
+✅ **Correct format:**
 ```json
-{
-  "cells": [
+{"cells": [
     { "blocks": [...], "colspan": 1 },
     { "blocks": [...] },
     { "blocks": [...] }
@@ -167,30 +159,28 @@ TABLE_REPAIR_SYSTEM_PROMPT = """你是一个专业的表格数据修复助手。
 }
 ```
 
-**修复原则：**
-1. **展平嵌套 cells** - 将错误嵌套的 cells 展平为同级
-2. **确保每个 cell 有 blocks** - 每个单元格必须有 blocks 数组
-3. **blocks 内使用 paragraph** - 文本内容应放在 paragraph block 内
-4. **保持数据完整性** - 不要丢失原始内容
+**Repair Principles:**
+1. **Flat nested cells** - Flatten incorrectly nested cells to siblings
+2. **Make sure each cell has blocks** - Each cell must have a blocks array
+3. Use paragraph within **blocks** - text content should be placed within paragraph block
+4. **Maintain Data Integrity** - Don’t lose the original content
 
-**修复方法：**
-1. 嵌套 cells 结构 → 展平为同级 cells 数组
-2. 缺少 blocks 字段 → 添加包含 paragraph 的 blocks
-3. 空 cells 数组 → 添加默认空单元格
-4. 非法 cell 类型 → 转换为标准格式
+**Fix:**
+1. Nested cells structure → flatten into sibling cells array
+2. Missing blocks field → add blocks containing paragraph
+3. Empty cells array → add default empty cells
+4. Illegal cell type → Convert to standard format
 
-请根据错误信息修复表格数据，并返回修复后的完整 table block（JSON格式）。
-"""
+Please repair the table data according to the error message and return the repaired complete table block (JSON format)."""
 
 
-# 词云修复提示词
-WORDCLOUD_REPAIR_SYSTEM_PROMPT = """你是一个专业的词云数据修复助手。你的任务是修复词云 widget 数据中的格式错误，确保词云能够正常渲染。
+# Word Cloud Repair Prompt Words
+WORDCLOUD_REPAIR_SYSTEM_PROMPT = """You are a professional word cloud data repair assistant. Your task is to fix formatting errors in the word cloud widget data and ensure that the word cloud renders properly.
 
-**标准词云数据格式：**
+**Standard word cloud data format:**
 
 ```json
-{
-  "type": "widget",
+{"type": "widget",
   "widgetType": "wordcloud",
   "widgetId": "wordcloud-001",
   "title": "词云标题",
@@ -204,77 +194,73 @@ WORDCLOUD_REPAIR_SYSTEM_PROMPT = """你是一个专业的词云数据修复助�
 }
 ```
 
-**⚠️ 数据路径说明：**
+**⚠️ Data path description: **
 
-词云数据可以位于以下路径（按优先级）：
-1. `data.words` - 推荐路径
-2. `data.items` - 备选路径
-3. `props.words` - 备选路径
-4. `props.items` - 备选路径
-5. `props.data` - 备选路径
+Word cloud data can be located in the following paths (in order of priority):
+1. `data.words` - recommended path
+2. `data.items` - alternative path
+3. `props.words` - alternative path
+4. `props.items` - alternative path
+5. `props.data` - alternative path
 
-**词云项目格式：**
+**Word Cloud Project Format:**
 
-每个词云项目应该是一个对象，包含：
-- `text` 或 `word` 或 `label`: 词语文本（必需）
-- `weight` 或 `value`: 权重/频率（必需）
-- `category`: 类别（可选）
+Each word cloud item should be an object containing:
+- `text` or `word` or `label`: word text (required)
+- `weight` or `value`: weight/frequency (required)
+- `category`: category (optional)
 
-**修复原则：**
-1. **规范化数据路径** - 优先使用 `data.words`
-2. **确保必需字段** - 每个词项必须有文本和权重
-3. **转换兼容格式** - 将其他格式转换为标准格式
-4. **保持数据完整性** - 不要丢失原始词语
+**Repair Principles:**
+1. **Normalized data path** - preferentially use `data.words`
+2. **Make sure fields are required** - Each term must have text and weight
+3. **Convert Compatible Formats** - Convert other formats to standard formats
+4. **Maintain Data Integrity** - Don’t lose the original words
 
-**常见错误及修复方法：**
-1. 数据位于错误路径 → 移动到 `data.words`
-2. 缺少 weight 字段 → 根据位置生成默认权重
-3. 使用 word 而非 text → 统一为 text 字段
-4. 数组元素是字符串 → 转换为对象格式
+**Common errors and how to fix them:**
+1. Data is in wrong path → move to `data.words`
+2. Missing weight field → generate default weight based on position
+3. Use word instead of text → Unify into text field
+4. Array elements are strings → converted to object format
 
-请根据错误信息修复词云数据，并返回修复后的完整 widget block（JSON格式）。
-"""
+Please repair the word cloud data according to the error message and return the repaired complete widget block (JSON format)."""
 
 
 def build_table_repair_prompt(
     table_block: Dict[str, Any],
     validation_errors: List[str]
 ) -> str:
-    """
-    构建表格修复提示词。
+    """Build table repair prompt words.
 
     Args:
-        table_block: 原始 table block
-        validation_errors: 验证错误列表
+        table_block: original table block
+        validation_errors: validation error list
 
     Returns:
-        str: 提示词
-    """
+        str: prompt word"""
     block_json = json.dumps(table_block, ensure_ascii=False, indent=2)
     errors_text = "\n".join(f"- {error}" for error in validation_errors)
 
-    prompt = f"""请修复以下表格数据中的错误：
+    prompt = f"""Please fix errors in the following table data:
 
-**原始数据：**
+**Raw data:**
 ```json
 {block_json}
 ```
 
-**检测到的错误：**
+**Error detected:**
 {errors_text}
 
-**要求：**
-1. 返回修复后的完整 table block（JSON格式）
-2. 特别注意展平嵌套的 cells 结构
-3. 确保每个 cell 都有 blocks 数组
-4. 如果无法确定如何修复，保持原始数据
+**Requirements:**
+1. Return the complete table block after repair (JSON format)
+2. Pay special attention to flattening the nested cells structure
+3. Make sure each cell has a blocks array
+4. If you are not sure how to fix it, keep the original data
 
-**重要的输出格式要求：**
-1. 只返回纯JSON对象，不要添加任何说明文字
-2. 不要使用```json```标记包裹
-3. 确保JSON语法完全正确
-4. 所有字符串使用双引号
-"""
+**Important output format requirements:**
+1. Only return pure JSON objects, do not add any description text
+2. Do not use ```json``` to mark packages
+3. Make sure the JSON syntax is completely correct
+4. Use double quotes for all strings"""
     return prompt
 
 
@@ -282,41 +268,38 @@ def build_wordcloud_repair_prompt(
     widget_block: Dict[str, Any],
     validation_errors: List[str]
 ) -> str:
-    """
-    构建词云修复提示词。
+    """Build a word cloud to repair prompt words.
 
     Args:
-        widget_block: 原始 wordcloud widget block
-        validation_errors: 验证错误列表
+        widget_block: original wordcloud widget block
+        validation_errors: validation error list
 
     Returns:
-        str: 提示词
-    """
+        str: prompt word"""
     block_json = json.dumps(widget_block, ensure_ascii=False, indent=2)
     errors_text = "\n".join(f"- {error}" for error in validation_errors)
 
-    prompt = f"""请修复以下词云数据中的错误：
+    prompt = f"""Please fix the errors in the following word cloud data:
 
-**原始数据：**
+**Raw data:**
 ```json
 {block_json}
 ```
 
-**检测到的错误：**
+**Error detected:**
 {errors_text}
 
-**要求：**
-1. 返回修复后的完整 widget block（JSON格式）
-2. 确保词云数据位于 data.words 路径
-3. 每个词项必须有 text 和 weight 字段
-4. 如果无法确定如何修复，保持原始数据
+**Requirements:**
+1. Return the repaired complete widget block (JSON format)
+2. Make sure the word cloud data is located in the data.words path
+3. Each term must have text and weight fields
+4. If you are not sure how to fix it, keep the original data
 
-**重要的输出格式要求：**
-1. 只返回纯JSON对象，不要添加任何说明文字
-2. 不要使用```json```标记包裹
-3. 确保JSON语法完全正确
-4. 所有字符串使用双引号
-"""
+**Important output format requirements:**
+1. Only return pure JSON objects, do not add any description text
+2. Do not use ```json``` to mark packages
+3. Make sure the JSON syntax is completely correct
+4. Use double quotes for all strings"""
     return prompt
 
 
@@ -324,63 +307,58 @@ def build_chart_repair_prompt(
     widget_block: Dict[str, Any],
     validation_errors: List[str]
 ) -> str:
-    """
-    构建图表修复提示词。
+    """Build diagram repair prompt words.
 
     Args:
-        widget_block: 原始widget block
-        validation_errors: 验证错误列表
+        widget_block: original widget block
+        validation_errors: validation error list
 
     Returns:
-        str: 提示词
-    """
+        str: prompt word"""
     block_json = json.dumps(widget_block, ensure_ascii=False, indent=2)
     errors_text = "\n".join(f"- {error}" for error in validation_errors)
 
-    prompt = f"""请修复以下图表数据中的错误：
+    prompt = f"""Please fix errors in the following chart data:
 
-**原始数据：**
+**Raw data:**
 ```json
 {block_json}
 ```
 
-**检测到的错误：**
+**Error detected:**
 {errors_text}
 
-**要求：**
-1. 返回修复后的完整widget block（JSON格式）
-2. 只修复明确的错误，保持其他数据不变
-3. 确保修复后的数据符合Chart.js格式要求
-4. 如果无法确定如何修复，保持原始数据
+**Requirements:**
+1. Return the repaired complete widget block (JSON format)
+2. Only fix clear errors and leave other data unchanged
+3. Ensure that the repaired data meets the Chart.js format requirements
+4. If you are not sure how to fix it, keep the original data
 
-**重要的输出格式要求：**
-1. 只返回纯JSON对象，不要添加任何说明文字
-2. 不要使用```json```标记包裹
-3. 确保JSON语法完全正确
-4. 所有字符串使用双引号
-"""
+**Important output format requirements:**
+1. Only return pure JSON objects, do not add any description text
+2. Do not use ```json``` to mark packages
+3. Make sure the JSON syntax is completely correct
+4. Use double quotes for all strings"""
     return prompt
 
 
 def create_llm_repair_functions() -> List:
-    """
-    创建LLM修复函数列表。
+    """Create a list of LLM repair functions.
 
-    返回4个Engine的修复函数：
+    Returns the repair function of 4 Engines:
     1. ReportEngine
-    2. ForumEngine (通过ForumHost)
-    3. InsightEngine
-    4. MediaEngine
+    2. ForumEngine (via ForumHost)
+    3.InsightEngine
+    4.MediaEngine
 
     Returns:
-        List[Callable]: 修复函数列表
-    """
+        List[Callable]: Repair function list"""
     repair_functions = []
 
-    # 1. ReportEngine修复函数
+    # 1. ReportEngine repair function
     if settings.REPORT_ENGINE_API_KEY and settings.REPORT_ENGINE_BASE_URL:
         def repair_with_report_engine(widget_block: Dict[str, Any], errors: List[str]) -> Optional[Dict[str, Any]]:
-            """使用ReportEngine的LLM修复图表"""
+            """Fix charts using ReportEngine's LLM"""
             try:
                 from ReportEngine.llms import LLMClient
 
@@ -401,21 +379,21 @@ def create_llm_repair_functions() -> List:
                 if not response:
                     return None
 
-                # 解析响应
+                # Parse response
                 repaired = json.loads(response)
                 return repaired
 
             except Exception as e:
-                logger.exception(f"ReportEngine图表修复失败: {e}")
+                logger.exception(f"ReportEngine chart repair failed: {e}")
                 return None
 
         repair_functions.append(repair_with_report_engine)
-        logger.debug("已添加ReportEngine图表修复函数")
+        logger.debug("ReportEngine chart repair function added")
 
-    # 2. ForumEngine修复函数
+    # 2. ForumEngine repair function
     if settings.FORUM_HOST_API_KEY and settings.FORUM_HOST_BASE_URL:
         def repair_with_forum_engine(widget_block: Dict[str, Any], errors: List[str]) -> Optional[Dict[str, Any]]:
-            """使用ForumEngine的LLM修复图表"""
+            """Fix charts using ForumEngine’s LLM"""
             try:
                 from ReportEngine.llms import LLMClient
 
@@ -440,16 +418,16 @@ def create_llm_repair_functions() -> List:
                 return repaired
 
             except Exception as e:
-                logger.exception(f"ForumEngine图表修复失败: {e}")
+                logger.exception(f"ForumEngine chart repair failed: {e}")
                 return None
 
         repair_functions.append(repair_with_forum_engine)
-        logger.debug("已添加ForumEngine图表修复函数")
+        logger.debug("ForumEngine chart repair function added")
 
-    # 3. InsightEngine修复函数
+    # 3. InsightEngine repair function
     if settings.INSIGHT_ENGINE_API_KEY and settings.INSIGHT_ENGINE_BASE_URL:
         def repair_with_insight_engine(widget_block: Dict[str, Any], errors: List[str]) -> Optional[Dict[str, Any]]:
-            """使用InsightEngine的LLM修复图表"""
+            """Repair charts using InsightEngine’s LLM"""
             try:
                 from ReportEngine.llms import LLMClient
 
@@ -474,16 +452,16 @@ def create_llm_repair_functions() -> List:
                 return repaired
 
             except Exception as e:
-                logger.exception(f"InsightEngine图表修复失败: {e}")
+                logger.exception(f"InsightEngine chart repair failed: {e}")
                 return None
 
         repair_functions.append(repair_with_insight_engine)
-        logger.debug("已添加InsightEngine图表修复函数")
+        logger.debug("InsightEngine chart repair function added")
 
-    # 4. MediaEngine修复函数
+    # 4. MediaEngine repair function
     if settings.MEDIA_ENGINE_API_KEY and settings.MEDIA_ENGINE_BASE_URL:
         def repair_with_media_engine(widget_block: Dict[str, Any], errors: List[str]) -> Optional[Dict[str, Any]]:
-            """使用MediaEngine的LLM修复图表"""
+            """Fix charts using MediaEngine's LLM"""
             try:
                 from ReportEngine.llms import LLMClient
 
@@ -508,35 +486,33 @@ def create_llm_repair_functions() -> List:
                 return repaired
 
             except Exception as e:
-                logger.exception(f"MediaEngine图表修复失败: {e}")
+                logger.exception(f"MediaEngine chart repair failed: {e}")
                 return None
 
         repair_functions.append(repair_with_media_engine)
-        logger.debug("已添加MediaEngine图表修复函数")
+        logger.debug("MediaEngine chart repair function added")
 
     if not repair_functions:
-        logger.warning("未配置任何Engine API，图表API修复功能将不可用")
+        logger.warning("No Engine API is configured, chart API fix functionality will not be available")
     else:
-        logger.info(f"图表API修复功能已启用，共 {len(repair_functions)} 个Engine可用")
+        logger.info(f"The chart API repair function has been enabled, and a total of {len(repair_functions)} Engines are available.")
 
     return repair_functions
 
 
 def create_table_repair_functions() -> List:
-    """
-    创建表格 LLM 修复函数列表。
+    """Create a tabular LLM repair function list.
 
-    使用与图表修复相同的 Engine 配置。
+    Use the same Engine configuration as the chart fix.
 
     Returns:
-        List[Callable]: 修复函数列表
-    """
+        List[Callable]: Repair function list"""
     repair_functions = []
 
-    # 使用 ReportEngine 修复表格
+    # Fix the table using ReportEngine
     if settings.REPORT_ENGINE_API_KEY and settings.REPORT_ENGINE_BASE_URL:
         def repair_table_with_report_engine(table_block: Dict[str, Any], errors: List[str]) -> Optional[Dict[str, Any]]:
-            """使用 ReportEngine 的 LLM 修复表格"""
+            """Repair tables using ReportEngine's LLM"""
             try:
                 from ReportEngine.llms import LLMClient
 
@@ -557,40 +533,38 @@ def create_table_repair_functions() -> List:
                 if not response:
                     return None
 
-                # 解析响应
+                # Parse response
                 repaired = json.loads(response)
                 return repaired
 
             except Exception as e:
-                logger.exception(f"ReportEngine 表格修复失败: {e}")
+                logger.exception(f"ReportEngine table repair failed: {e}")
                 return None
 
         repair_functions.append(repair_table_with_report_engine)
-        logger.debug("已添加 ReportEngine 表格修复函数")
+        logger.debug("ReportEngine table repair function added")
 
     if not repair_functions:
-        logger.warning("未配置任何 Engine API，表格 API 修复功能将不可用")
+        logger.warning("No Engine API is configured, table API fixes will not be available")
     else:
-        logger.info(f"表格 API 修复功能已启用，共 {len(repair_functions)} 个 Engine 可用")
+        logger.info(f"Tables API repair functions are enabled, {len(repair_functions)} Engines available")
 
     return repair_functions
 
 
 def create_wordcloud_repair_functions() -> List:
-    """
-    创建词云 LLM 修复函数列表。
+    """Create a word cloud list of LLM repair functions.
 
-    使用与图表修复相同的 Engine 配置。
+    Use the same Engine configuration as the chart fix.
 
     Returns:
-        List[Callable]: 修复函数列表
-    """
+        List[Callable]: Repair function list"""
     repair_functions = []
 
-    # 使用 ReportEngine 修复词云
+    # Fix word cloud using ReportEngine
     if settings.REPORT_ENGINE_API_KEY and settings.REPORT_ENGINE_BASE_URL:
         def repair_wordcloud_with_report_engine(widget_block: Dict[str, Any], errors: List[str]) -> Optional[Dict[str, Any]]:
-            """使用 ReportEngine 的 LLM 修复词云"""
+            """Fix word cloud using ReportEngine's LLM"""
             try:
                 from ReportEngine.llms import LLMClient
 
@@ -611,20 +585,20 @@ def create_wordcloud_repair_functions() -> List:
                 if not response:
                     return None
 
-                # 解析响应
+                # Parse response
                 repaired = json.loads(response)
                 return repaired
 
             except Exception as e:
-                logger.exception(f"ReportEngine 词云修复失败: {e}")
+                logger.exception(f"ReportEngine word cloud repair failed: {e}")
                 return None
 
         repair_functions.append(repair_wordcloud_with_report_engine)
-        logger.debug("已添加 ReportEngine 词云修复函数")
+        logger.debug("ReportEngine word cloud repair function added")
 
     if not repair_functions:
-        logger.warning("未配置任何 Engine API，词云 API 修复功能将不可用")
+        logger.warning("No Engine API is configured, word cloud API fix functionality will not be available")
     else:
-        logger.info(f"词云 API 修复功能已启用，共 {len(repair_functions)} 个 Engine 可用")
+        logger.info(f"Word cloud API repair function is enabled, a total of {len(repair_functions)} Engines are available")
 
     return repair_functions

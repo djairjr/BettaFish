@@ -1,10 +1,8 @@
-"""
-Query Engine 配置管理模块
+"""Query Engine configuration management module
 
-此模块使用 pydantic-settings 管理 Query Engine 的配置，支持从环境变量和 .env 文件自动加载。
-数据模型定义位置：
-- 本文件 - 配置模型定义
-"""
+This module uses pydantic-settings to manage Query Engine configuration and supports automatic loading from environment variables and .env files.
+Data model definition location:
+- This document - Configuration model definition"""
 
 from pathlib import Path
 from pydantic_settings import BaseSettings
@@ -13,37 +11,35 @@ from typing import Optional
 from loguru import logger
 
 
-# 计算 .env 优先级：优先当前工作目录，其次项目根目录
+# Calculate .env priority: the current working directory first, followed by the project root directory
 PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 CWD_ENV: Path = Path.cwd() / ".env"
 ENV_FILE: str = str(CWD_ENV if CWD_ENV.exists() else (PROJECT_ROOT / ".env"))
 
 
 class Settings(BaseSettings):
-    """
-    Query Engine 全局配置；支持 .env 和环境变量自动加载。
-    变量名与原 config.py 大写一致，便于平滑过渡。
-    """
+    """Query Engine global configuration; supports automatic loading of .env and environment variables.
+    The variable names are capitalized the same as the original config.py to facilitate smooth transition."""
     
-    # ======================= LLM 相关 =======================
-    QUERY_ENGINE_API_KEY: str = Field(..., description="Query Engine LLM API密钥，用于主LLM。您可以更改每个部分LLM使用的API，🚩只要兼容OpenAI请求格式都可以，定义好KEY、BASE_URL与MODEL_NAME即可正常使用。")
-    QUERY_ENGINE_BASE_URL: Optional[str] = Field(None, description="Query Engine LLM接口BaseUrl，可自定义厂商API")
-    QUERY_ENGINE_MODEL_NAME: str = Field(..., description="Query Engine LLM模型名称")
-    QUERY_ENGINE_PROVIDER: Optional[str] = Field(None, description="Query Engine LLM提供商（兼容字段）")
+    # ======================= LLM related =======================
+    QUERY_ENGINE_API_KEY: str = Field(..., description="Query Engine LLM API key, used for the main LLM. You can change the API used by each part of LLM. As long as it is compatible with the OpenAI request format, it can be used normally after defining KEY, BASE_URL and MODEL_NAME.")
+    QUERY_ENGINE_BASE_URL: Optional[str] = Field(None, description="Query Engine LLM interface BaseUrl, customizable manufacturer API")
+    QUERY_ENGINE_MODEL_NAME: str = Field(..., description="Query Engine LLM model name")
+    QUERY_ENGINE_PROVIDER: Optional[str] = Field(None, description="Query Engine LLM provider (compatible fields)")
     
-    # ================== 网络工具配置 ====================
-    TAVILY_API_KEY: str = Field(..., description="Tavily API（申请地址：https://www.tavily.com/）API密钥，用于Tavily网络搜索")
+    # ================== Network tool configuration ====================
+    TAVILY_API_KEY: str = Field(..., description="Tavily API (application address: https://www.tavily.com/) API key, used for Tavily web search")
     
-    # ================== 搜索参数配置 ====================
-    SEARCH_TIMEOUT: int = Field(240, description="搜索超时（秒）")
-    SEARCH_CONTENT_MAX_LENGTH: int = Field(20000, description="用于提示的最长内容长度")
-    MAX_REFLECTIONS: int = Field(2, description="最大反思轮数")
-    MAX_PARAGRAPHS: int = Field(5, description="最大段落数")
-    MAX_SEARCH_RESULTS: int = Field(20, description="最大搜索结果数")
+    # ================== Search parameter configuration ====================
+    SEARCH_TIMEOUT: int = Field(240, description="Search timeout (seconds)")
+    SEARCH_CONTENT_MAX_LENGTH: int = Field(20000, description="Maximum content length to use for prompts")
+    MAX_REFLECTIONS: int = Field(2, description="Maximum number of reflection rounds")
+    MAX_PARAGRAPHS: int = Field(5, description="Maximum number of paragraphs")
+    MAX_SEARCH_RESULTS: int = Field(20, description="Maximum number of search results")
     
-    # ================== 输出配置 ====================
-    OUTPUT_DIR: str = Field("reports", description="输出目录")
-    SAVE_INTERMEDIATE_STATES: bool = Field(True, description="是否保存中间状态")
+    # ================== Output configuration ====================
+    OUTPUT_DIR: str = Field("reports", description="output directory")
+    SAVE_INTERMEDIATE_STATES: bool = Field(True, description="Whether to save the intermediate state")
     
     class Config:
         env_file = ENV_FILE
@@ -52,28 +48,26 @@ class Settings(BaseSettings):
         extra = "allow"
 
 
-# 创建全局配置实例
+# Create a global configuration instance
 settings = Settings()
 
 def print_config(config: Settings):
-    """
-    打印配置信息
+    """打印配置信息
     
     Args:
-        config: Settings配置对象
-    """
+        config: Settings配置对象"""
     message = ""
-    message += "=== Query Engine 配置 ===\n"
-    message += f"LLM 模型: {config.QUERY_ENGINE_MODEL_NAME}\n"
-    message += f"LLM Base URL: {config.QUERY_ENGINE_BASE_URL or '(默认)'}\n"
-    message += f"Tavily API Key: {'已配置' if config.TAVILY_API_KEY else '未配置'}\n"
-    message += f"搜索超时: {config.SEARCH_TIMEOUT} 秒\n"
-    message += f"最长内容长度: {config.SEARCH_CONTENT_MAX_LENGTH}\n"
-    message += f"最大反思次数: {config.MAX_REFLECTIONS}\n"
-    message += f"最大段落数: {config.MAX_PARAGRAPHS}\n"
-    message += f"最大搜索结果数: {config.MAX_SEARCH_RESULTS}\n"
-    message += f"输出目录: {config.OUTPUT_DIR}\n"
-    message += f"保存中间状态: {config.SAVE_INTERMEDIATE_STATES}\n"
-    message += f"LLM API Key: {'已配置' if config.QUERY_ENGINE_API_KEY else '未配置'}\n"
+    message += "=== Query Engine Configuration ===\n"
+    message += f"LLM model: {config.QUERY_ENGINE_MODEL_NAME}\n"
+    message += f"LLM Base URL: {config.QUERY_ENGINE_BASE_URL or '(default)'}\n"
+    message += f"Tavily API Key: {'configured' if config.TAVILY_API_KEY else 'not configured'}\n"
+    message += f"Search timeout: {config.SEARCH_TIMEOUT} seconds\n"
+    message += f"Maximum content length: {config.SEARCH_CONTENT_MAX_LENGTH}\n"
+    message += f"Maximum number of reflections: {config.MAX_REFLECTIONS}\n"
+    message += f"Maximum number of paragraphs: {config.MAX_PARAGRAPHS}\n"
+    message += f"Maximum number of search results: {config.MAX_SEARCH_RESULTS}\n"
+    message += f"Output directory: {config.OUTPUT_DIR}\n"
+    message += f"Save intermediate states: {config.SAVE_INTERMEDIATE_STATES}\n"
+    message += f"LLM API Key: {'configured' if config.QUERY_ENGINE_API_KEY else 'not configured'}\n"
     message += "========================\n"
     logger.info(message)
