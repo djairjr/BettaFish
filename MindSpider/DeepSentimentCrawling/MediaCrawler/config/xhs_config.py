@@ -1,30 +1,30 @@
 # -*- coding: utf-8 -*-
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
-# 小红书平台配置
+# Xiaohongshu platform configuration
 
-# 排序方式，具体的枚举值在media_platform/xhs/field.py中
+# Sorting method, the specific enumeration value is in media_platform/xhs/field.py
 SORT_TYPE = "popularity_descending"
 
-# 指定笔记URL列表, 必须要携带xsec_token参数
+# Specify the note URL list, which must carry the xsec_token parameter
 XHS_SPECIFIED_NOTE_URL_LIST = [
     "https://www.xiaohongshu.com/explore/68f99f6d0000000007033fcf?xsec_token=ABZEzjuN2fPjKF9EcMsCCxfbt3IBRsFZldGFoCJbdDmXI=&xsec_source=pc_feed"
     # ........................
 ]
 
-# 指定创作者URL列表 (支持完整URL或纯ID)
-# 支持格式:
-# 1. 完整创作者主页URL (带xsec_token和xsec_source参数): "https://www.xiaohongshu.com/user/profile/5eb8e1d400000000010075ae?xsec_token=AB1nWBKCo1vE2HEkfoJUOi5B6BE5n7wVrbdpHoWIj5xHw=&xsec_source=pc_feed"
-# 2. 纯user_id: "63e36c9a000000002703502b"
+# Specify creator URL list (supports full URL or pure ID)
+# Supported formats:
+# 1. Complete creator homepage URL (with xsec_token and xsec_source parameters): "https://www.xiaohongshu.com/user/profile/5eb8e1d400000000010075ae?xsec_token=AB1nWBKCo1vE2HEkfoJUOi5B6BE5n7wVrbdpHoWIj5xHw=&xsec_source=pc_feed"
+# 2. Pure user_id: "63e36c9a000000002703502b"
 XHS_CREATOR_ID_LIST = [
     "https://www.xiaohongshu.com/user/profile/5eb8e1d400000000010075ae?xsec_token=AB1nWBKCo1vE2HEkfoJUOi5B6BE5n7wVrbdpHoWIj5xHw=&xsec_source=pc_feed",
     "63e36c9a000000002703502b",    
