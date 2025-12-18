@@ -1,24 +1,24 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
-# 贴吧平台配置
+# Tieba platform configuration
 
-# 指定贴吧ID列表
+# Specify Tieba ID list
 TIEBA_SPECIFIED_ID_LIST = []
 
-# 指定贴吧名称列表
+# Specify a list of Tieba names
 TIEBA_NAME_LIST = [
-    # "盗墓笔记"
+    # "Tomb Robbery Notes"robbing notes"
 ]
 
-# 指定贴吧用户URL列表
+# Specify Tieba user URL list
 TIEBA_CREATOR_URL_LIST = [
     "https://tieba.baidu.com/home/main/?id=tb.1.7f139e2e.6CyEwxu3VJruH_-QqpCi6g&fr=frs",
     # ........................
