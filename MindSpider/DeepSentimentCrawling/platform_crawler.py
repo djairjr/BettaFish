@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-DeepSentimentCrawling模块 - 平台爬虫管理器
-负责配置和调用MediaCrawler进行多平台爬取
-"""
+"""DeepSentimentCrawling module - platform crawler manager
+Responsible for configuring and calling MediaCrawler for multi-platform crawling"""
 
 import os
 import sys
@@ -15,66 +13,66 @@ from typing import List, Dict, Optional
 import json
 from loguru import logger
 
-# 添加项目根目录到路径
+# Add project root directory to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 try:
     import config
 except ImportError:
-    raise ImportError("无法导入config.py配置文件")
+    raise ImportError("Unable to import config.py configuration file")
 
 class PlatformCrawler:
-    """平台爬虫管理器"""
+    """Platform crawler manager"""
     
     def __init__(self):
-        """初始化平台爬虫管理器"""
+        """Initialize the platform crawler manager"""
         self.mediacrawler_path = Path(__file__).parent / "MediaCrawler"
         self.supported_platforms = ['xhs', 'dy', 'ks', 'bili', 'wb', 'tieba', 'zhihu']
         self.crawl_stats = {}
         
-        # 确保MediaCrawler目录存在
+        # Make sure the MediaCrawler directory exists
         if not self.mediacrawler_path.exists():
-            raise FileNotFoundError(f"MediaCrawler目录不存在: {self.mediacrawler_path}")
+            raise FileNotFoundError(f"MediaCrawler directory does not exist: {self.mediacrawler_path}")
         
         logger.info(f"初始化平台爬虫管理器，MediaCrawler路径: {self.mediacrawler_path}")
     
     def configure_mediacrawler_db(self):
-        """配置MediaCrawler使用我们的数据库（MySQL或PostgreSQL）"""
+        """Configure MediaCrawler to use our database (MySQL or PostgreSQL)"""
         try:
-            # 判断数据库类型
+            # Determine database type
             db_dialect = (config.settings.DB_DIALECT or "mysql").lower()
             is_postgresql = db_dialect in ("postgresql", "postgres")
             
-            # 修改MediaCrawler的数据库配置
+            # Modify the database configuration of MediaCrawler
             db_config_path = self.mediacrawler_path / "config" / "db_config.py"
             
-            # 读取原始配置
+            # Read original configuration
             with open(db_config_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # PostgreSQL配置值：如果使用PostgreSQL则使用MindSpider配置，否则使用默认值或环境变量
+            # PostgreSQL configuration values: If using PostgreSQL, use MindSpider configuration, otherwise use default values ​​or environment variables
             pg_password = config.settings.DB_PASSWORD if is_postgresql else "bettafish"
             pg_user = config.settings.DB_USER if is_postgresql else "bettafish"
             pg_host = config.settings.DB_HOST if is_postgresql else "127.0.0.1"
             pg_port = config.settings.DB_PORT if is_postgresql else 5432
             pg_db_name = config.settings.DB_NAME if is_postgresql else "bettafish"
             
-            # 替换数据库配置 - 使用MindSpider的数据库配置
-            new_config = f'''# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：  
-# 1. 不得用于任何商业用途。  
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。  
-# 3. 不得进行大规模爬取或对平台造成运营干扰。  
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。   
-# 5. 不得用于任何非法或不当的用途。
+            # Replace database configuration - use MindSpider's database configuration
+            new_config = f'''# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #   
-# 详细许可条款请参阅项目根目录下的LICENSE文件。  
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。  
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 import os
 
-# mysql config - 使用MindSpider的数据库配置
+# mysql config - Database configuration using MindSpider
 MYSQL_DB_PWD = "{config.settings.DB_PASSWORD}"
 MYSQL_DB_USER = "{config.settings.DB_USER}"
 MYSQL_DB_HOST = "{config.settings.DB_HOST}"
@@ -107,7 +105,7 @@ sqlite_db_config = {{
     "db_path": SQLITE_DB_PATH
 }}
 
-# postgresql config - 使用MindSpider的数据库配置（如果DB_DIALECT是postgresql）或环境变量
+# postgresql config - Database configuration using MindSpider (if DB_DIALECT is postgresql) or environment variables
 POSTGRESQL_DB_PWD = os.getenv("POSTGRESQL_DB_PWD", "{pg_password}")
 POSTGRESQL_DB_USER = os.getenv("POSTGRESQL_DB_USER", "{pg_user}")
 POSTGRESQL_DB_HOST = os.getenv("POSTGRESQL_DB_HOST", "{pg_host}")
@@ -124,58 +122,56 @@ postgresql_db_config = {{
 
 '''
             
-            # 写入新配置
+            # Write new configuration
             with open(db_config_path, 'w', encoding='utf-8') as f:
                 f.write(new_config)
             
             db_type = "PostgreSQL" if is_postgresql else "MySQL"
-            logger.info(f"已配置MediaCrawler使用MindSpider {db_type}数据库")
+            logger.info(f"MediaCrawler has been configured to use the MindSpider {db_type} database")
             return True
             
         except Exception as e:
-            logger.exception(f"配置MediaCrawler数据库失败: {e}")
+            logger.exception(f"Failed to configure MediaCrawler database: {e}")
             return False
     
     def create_base_config(self, platform: str, keywords: List[str], 
                           crawler_type: str = "search", max_notes: int = 50) -> bool:
-        """
-        创建MediaCrawler的基础配置
+        """Create the basic configuration of MediaCrawler
         
         Args:
-            platform: 平台名称
-            keywords: 关键词列表
-            crawler_type: 爬取类型
-            max_notes: 最大爬取数量
+            platform: platform name
+            keywords: keyword list
+            crawler_type: crawler type
+            max_notes: Maximum number of crawls
         
         Returns:
-            是否配置成功
-        """
+            Is the configuration successful?"""
         try:
-            # 判断数据库类型，确定 SAVE_DATA_OPTION
+            # Determine the database type and determine SAVE_DATA_OPTION
             db_dialect = (config.settings.DB_DIALECT or "mysql").lower()
             is_postgresql = db_dialect in ("postgresql", "postgres")
             save_data_option = "postgresql" if is_postgresql else "db"
             
             base_config_path = self.mediacrawler_path / "config" / "base_config.py"
             
-            # 将关键词列表转换为逗号分隔的字符串
+            # Convert list of keywords to comma separated string
             keywords_str = ",".join(keywords)
             
-            # 读取原始配置文件
+            # Read original configuration file
             with open(base_config_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # 修改关键配置项
+            # Modify key configuration items
             lines = content.split('\n')
             new_lines = []
             
             for line in lines:
                 if line.startswith('PLATFORM = '):
-                    new_lines.append(f'PLATFORM = "{platform}"  # 平台，xhs | dy | ks | bili | wb | tieba | zhihu')
+                    new_lines.append(f'PLATFORM = "{platform}"  # Platform, xhs | dy | ks | bili | wb | tieba | zhihu')
                 elif line.startswith('KEYWORDS = '):
-                    new_lines.append(f'KEYWORDS = "{keywords_str}"  # 关键词搜索配置，以英文逗号分隔')
+                    new_lines.append(f'KEYWORDS = "{keywords_str}"  # Keyword search configuration, separated by English commas')
                 elif line.startswith('CRAWLER_TYPE = '):
-                    new_lines.append(f'CRAWLER_TYPE = "{crawler_type}"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)')
+                    new_lines.append(f'CRAWLER_TYPE = "{crawler_type}"  # Crawling type, search (keyword search) | detail (post details) | creator (creator homepage data)')
                 elif line.startswith('SAVE_DATA_OPTION = '):
                     new_lines.append(f'SAVE_DATA_OPTION = "{save_data_option}"  # csv or db or json or sqlite or postgresql')
                 elif line.startswith('CRAWLER_MAX_NOTES_COUNT = '):
@@ -185,62 +181,60 @@ postgresql_db_config = {{
                 elif line.startswith('CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = '):
                     new_lines.append('CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 20')
                 elif line.startswith('HEADLESS = '):
-                    new_lines.append('HEADLESS = True')  # 使用无头模式
+                    new_lines.append('HEADLESS = True')  # Use headless mode
                 else:
                     new_lines.append(line)
             
-            # 写入新配置
+            # Write new configuration
             with open(base_config_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(new_lines))
             
-            logger.info(f"已配置 {platform} 平台，爬取类型: {crawler_type}，关键词数量: {len(keywords)}，最大爬取数量: {max_notes}，保存数据方式: {save_data_option}")
+            logger.info(f"{platform} platform has been configured, crawler type: {crawler_type}, number of keywords: {len(keywords)}, maximum number of crawlers: {max_notes}, data saving method: {save_data_option}")
             return True
             
         except Exception as e:
-            logger.exception(f"创建基础配置失败: {e}")
+            logger.exception(f"Failed to create basic configuration: {e}")
             return False
     
     def run_crawler(self, platform: str, keywords: List[str], 
                    login_type: str = "qrcode", max_notes: int = 50) -> Dict:
-        """
-        运行爬虫
+        """Run the crawler
         
         Args:
-            platform: 平台名称
-            keywords: 关键词列表
-            login_type: 登录方式
-            max_notes: 最大爬取数量
+            platform: platform name
+            keywords: keyword list
+            login_type: login method
+            max_notes: Maximum number of crawls
         
         Returns:
-            爬取结果统计
-        """
+            Crawling result statistics"""
         if platform not in self.supported_platforms:
-            raise ValueError(f"不支持的平台: {platform}")
+            raise ValueError(f"Unsupported platforms: {platform}")
         
         if not keywords:
-            raise ValueError("关键词列表不能为空")
+            raise ValueError("Keyword list cannot be empty")
         
-        start_message = f"\n开始爬取平台: {platform}"
-        start_message += f"\n关键词: {keywords[:5]}{'...' if len(keywords) > 5 else ''} (共{len(keywords)}个)"
+        start_message = f"\nStart crawling platform: {platform}"
+        start_message += f"\nKeywords: {keywords[:5]}{'...' if len(keywords) > 5 else ''} ({len(keywords)} in total)"
         logger.info(start_message)
         
         start_time = datetime.now()
         
         try:
-            # 配置数据库
+            # Configuration database
             if not self.configure_mediacrawler_db():
-                return {"success": False, "error": "数据库配置失败"}
+                return {"success": False, "error": "Database configuration failed"}
             
-            # 创建基础配置
+            # Create basic configuration
             if not self.create_base_config(platform, keywords, "search", max_notes):
-                return {"success": False, "error": "基础配置创建失败"}
+                return {"success": False, "error": "Basic configuration creation failed"}
             
-            # 判断数据库类型，确定 save_data_option
+            # Determine the database type and determine save_data_option
             db_dialect = (config.settings.DB_DIALECT or "mysql").lower()
             is_postgresql = db_dialect in ("postgresql", "postgres")
             save_data_option = "postgresql" if is_postgresql else "db"
             
-            # 构建命令
+            # Build command
             cmd = [
                 sys.executable, "main.py",
                 "--platform", platform,
@@ -249,19 +243,19 @@ postgresql_db_config = {{
                 "--save_data_option", save_data_option
             ]
             
-            logger.info(f"执行命令: {' '.join(cmd)}")
+            logger.info(f"Execute command: {' '.join(cmd)}")
             
-            # 切换到MediaCrawler目录并执行
+            # Switch to the MediaCrawler directory and execute
             result = subprocess.run(
                 cmd,
                 cwd=self.mediacrawler_path,
-                timeout=3600  # 60分钟超时
+                timeout=3600  # 60 minutes timeout
             )
             
             end_time = datetime.now()
             duration = (end_time - start_time).total_seconds()
             
-            # 创建统计信息
+            # Create statistics
             crawl_stats = {
                 "platform": platform,
                 "keywords_count": len(keywords),
@@ -275,25 +269,25 @@ postgresql_db_config = {{
                 "errors_count": 0
             }
             
-            # 保存统计信息
+            # Save statistics
             self.crawl_stats[platform] = crawl_stats
             
             if result.returncode == 0:
-                logger.info(f"✅ {platform} 爬取完成，耗时: {duration:.1f}秒")
+                logger.info(f"✅ {platform} crawling completed, taking: {duration:.1f} seconds")
             else:
-                logger.error(f"❌ {platform} 爬取失败，返回码: {result.returncode}")
+                logger.error(f"❌ {platform} crawling failed, return code: {result.returncode}")
             
             return crawl_stats
             
         except subprocess.TimeoutExpired:
-            logger.exception(f"❌ {platform} 爬取超时")
-            return {"success": False, "error": "爬取超时", "platform": platform}
+            logger.exception(f"❌ {platform} crawl timeout")
+            return {"success": False, "error": "Crawl timeout", "platform": platform}
         except Exception as e:
-            logger.exception(f"❌ {platform} 爬取异常: {e}")
+            logger.exception(f"❌ {platform} crawling exception: {e}")
             return {"success": False, "error": str(e), "platform": platform}
     
     def _parse_crawl_output(self, output_lines: List[str], error_lines: List[str]) -> Dict:
-        """解析爬取输出，提取统计信息"""
+        """Parse crawl output and extract statistical information"""
         stats = {
             "notes_count": 0,
             "comments_count": 0,
@@ -301,18 +295,18 @@ postgresql_db_config = {{
             "login_required": False
         }
         
-        # 解析输出行
+        # parse output line
         for line in output_lines:
-            if "条笔记" in line or "条内容" in line:
+            if "notes" in line or "content" in line:
                 try:
-                    # 提取数字
+                    # Extract numbers
                     import re
                     numbers = re.findall(r'\d+', line)
                     if numbers:
                         stats["notes_count"] = int(numbers[0])
                 except:
                     pass
-            elif "条评论" in line:
+            elif "comments" in line:
                 try:
                     import re
                     numbers = re.findall(r'\d+', line)
@@ -320,37 +314,35 @@ postgresql_db_config = {{
                         stats["comments_count"] = int(numbers[0])
                 except:
                     pass
-            elif "登录" in line or "扫码" in line:
+            elif "Log in" in line or "Scan code" in line:
                 stats["login_required"] = True
         
-        # 解析错误行
+        # parse error line
         for line in error_lines:
-            if "error" in line.lower() or "异常" in line:
+            if "error" in line.lower() or "abnormal" in line:
                 stats["errors_count"] += 1
         
         return stats
     
     def run_multi_platform_crawl_by_keywords(self, keywords: List[str], platforms: List[str],
                                             login_type: str = "qrcode", max_notes_per_keyword: int = 50) -> Dict:
-        """
-        基于关键词的多平台爬取 - 每个关键词在所有平台上都进行爬取
+        """Keyword-based multi-platform crawling - each keyword is crawled on all platforms
         
         Args:
-            keywords: 关键词列表
-            platforms: 平台列表
-            login_type: 登录方式
-            max_notes_per_keyword: 每个关键词在每个平台的最大爬取数量
+            keywords: keyword list
+            platforms: list of platforms
+            login_type: login method
+            max_notes_per_keyword: The maximum number of crawls for each keyword on each platform
         
         Returns:
-            总体爬取统计
-        """
+            Overall crawl statistics"""
         
-        start_message = f"\n🚀 开始全平台关键词爬取"
-        start_message += f"\n   关键词数量: {len(keywords)}"
-        start_message += f"\n   平台数量: {len(platforms)}"
-        start_message += f"\n   登录方式: {login_type}"
-        start_message += f"\n   每个关键词在每个平台的最大爬取数量: {max_notes_per_keyword}"
-        start_message += f"\n   总爬取任务: {len(keywords)} × {len(platforms)} = {len(keywords) * len(platforms)}"
+        start_message = f"\n🚀 Start crawling keywords across all platforms"
+        start_message += f"\nNumber of keywords: {len(keywords)}"
+        start_message += f"\n Number of platforms: {len(platforms)}"
+        start_message += f"\n Login type: {login_type}"
+        start_message += f"\nMaximum number of crawls for each keyword on each platform: {max_notes_per_keyword}"
+        start_message += f"\n Total crawling tasks: {len(keywords)} × {len(platforms)} = {len(keywords) * len(platforms)}"
         logger.info(start_message)
         
         total_stats = {
@@ -365,7 +357,7 @@ postgresql_db_config = {{
             "platform_summary": {}
         }
         
-        # 初始化平台统计
+        # Initialize platform statistics
         for platform in platforms:
             total_stats["platform_summary"][platform] = {
                 "successful_keywords": 0,
@@ -374,13 +366,13 @@ postgresql_db_config = {{
                 "total_comments": 0
             }
         
-        # 对每个平台一次性爬取所有关键词
+        # Crawl all keywords for each platform at once
         for platform in platforms:
-            logger.info(f"\n📝 在 {platform} 平台爬取所有关键词")
-            logger.info(f"   关键词: {', '.join(keywords[:5])}{'...' if len(keywords) > 5 else ''}")
+            logger.info(f"\n📝Crawl all keywords on {platform} platform")
+            logger.info(f"Keywords: {', '.join(keywords[:5])}{'...' if len(keywords) > 5 else ''}")
             
             try:
-                # 一次性传递所有关键词给平台
+                # Pass all keywords to the platform at once
                 result = self.run_crawler(platform, keywords, login_type, max_notes_per_keyword)
                 
                 if result.get("success"):
@@ -395,59 +387,59 @@ postgresql_db_config = {{
                     total_stats["platform_summary"][platform]["total_notes"] = notes_count
                     total_stats["platform_summary"][platform]["total_comments"] = comments_count
                     
-                    # 为每个关键词记录结果
+                    # Record results for each keyword
                     for keyword in keywords:
                         if keyword not in total_stats["keyword_results"]:
                             total_stats["keyword_results"][keyword] = {}
                         total_stats["keyword_results"][keyword][platform] = result
                     
-                    logger.info(f"   ✅ 成功: {notes_count} 条内容, {comments_count} 条评论")
+                    logger.info(f"✅ Success: {notes_count} content, {comments_count} comments")
                 else:
                     total_stats["failed_tasks"] += len(keywords)
                     total_stats["platform_summary"][platform]["failed_keywords"] = len(keywords)
                     
-                    # 为每个关键词记录失败结果
+                    # Record failure results for each keyword
                     for keyword in keywords:
                         if keyword not in total_stats["keyword_results"]:
                             total_stats["keyword_results"][keyword] = {}
                         total_stats["keyword_results"][keyword][platform] = result
                     
-                    logger.error(f"   ❌ 失败: {result.get('error', '未知错误')}")
+                    logger.error(f"❌ Failure: {result.get('error', 'Unknown error')}")
             
             except Exception as e:
                 total_stats["failed_tasks"] += len(keywords)
                 total_stats["platform_summary"][platform]["failed_keywords"] = len(keywords)
                 error_result = {"success": False, "error": str(e)}
                 
-                # 为每个关键词记录异常结果
+                # Record abnormal results for each keyword
                 for keyword in keywords:
                     if keyword not in total_stats["keyword_results"]:
                         total_stats["keyword_results"][keyword] = {}
                     total_stats["keyword_results"][keyword][platform] = error_result
                 
-                logger.error(f"   ❌ 异常: {e}")
+                logger.error(f"❌Exception: {e}")
         
-        # 打印详细统计
-        finish_message = f"\n📊 全平台关键词爬取完成!"
-        finish_message += f"\n   总任务: {total_stats['total_tasks']}"
-        finish_message += f"\n   成功: {total_stats['successful_tasks']}"
-        finish_message += f"\n   失败: {total_stats['failed_tasks']}"
-        finish_message += f"\n   成功率: {total_stats['successful_tasks']/total_stats['total_tasks']*100:.1f}%"
-        finish_message += f"\n   总内容: {total_stats['total_notes']} 条"
-        finish_message += f"\n   总评论: {total_stats['total_comments']} 条"
+        # Print detailed statistics
+        finish_message = f"\n📊 Full platform keyword crawling completed!"
+        finish_message += f"\nTotal tasks: {total_stats['total_tasks']}"
+        finish_message += f"\n Success: {total_stats['successful_tasks']}"
+        finish_message += f"\n Failed: {total_stats['failed_tasks']}"
+        finish_message += f"\n Success rate: {total_stats['successful_tasks']/total_stats['total_tasks']*100:.1f}%"
+        finish_message += f"\n Total content: {total_stats['total_notes']} items"
+        finish_message += f"\n Total comments: {total_stats['total_comments']}"
         logger.info(finish_message)
         
-        platform_summary_message = f"\n� 各平台统计:"
+        platform_summary_message = f"\n� Statistics of each platform:"
         for platform, stats in total_stats["platform_summary"].items():
             success_rate = stats["successful_keywords"] / len(keywords) * 100 if keywords else 0
-            platform_summary_message += f"\n   {platform}: {stats['successful_keywords']}/{len(keywords)} 关键词成功 ({success_rate:.1f}%), "
-            platform_summary_message += f"{stats['total_notes']} 条内容"
+            platform_summary_message += f"\n {platform}: {stats['successful_keywords']}/{len(keywords)} Keyword success ({success_rate:.1f}%),"
+            platform_summary_message += f"{stats['total_notes']} items"
         logger.info(platform_summary_message)
         
         return total_stats
     
     def get_crawl_statistics(self) -> Dict:
-        """获取爬取统计信息"""
+        """Get crawl statistics"""
         return {
             "platforms_crawled": list(self.crawl_stats.keys()),
             "total_platforms": len(self.crawl_stats),
@@ -455,24 +447,24 @@ postgresql_db_config = {{
         }
     
     def save_crawl_log(self, log_path: str = None):
-        """保存爬取日志"""
+        """Save crawl log"""
         if not log_path:
             log_path = f"crawl_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         try:
             with open(log_path, 'w', encoding='utf-8') as f:
                 json.dump(self.crawl_stats, f, ensure_ascii=False, indent=2)
-            logger.info(f"爬取日志已保存到: {log_path}")
+            logger.info(f"Crawl logs have been saved to: {log_path}")
         except Exception as e:
-            logger.exception(f"保存爬取日志失败: {e}")
+            logger.exception(f"Failed to save crawl log: {e}")
 
 if __name__ == "__main__":
-    # 测试平台爬虫管理器
+    # Test platform crawler manager
     crawler = PlatformCrawler()
     
-    # 测试配置
-    test_keywords = ["科技", "AI", "编程"]
+    # Test configuration
+    test_keywords = ["science and technology", "AI", "programming"]
     result = crawler.run_crawler("xhs", test_keywords, max_notes=5)
     
-    logger.info(f"测试结果: {result}")
-    logger.info("平台爬虫管理器测试完成！")
+    logger.info(f"Test result: {result}")
+    logger.info("Platform crawler manager testing completed!")

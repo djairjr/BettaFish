@@ -1,7 +1,5 @@
-"""
-Deep Search Agent主类
-整合所有模块，实现完整的深度搜索流程
-"""
+"""Deep Search Agent main class
+Integrate all modules to achieve a complete in-depth search process"""
 
 import json
 import os
@@ -24,38 +22,36 @@ from .utils import settings, Settings, format_search_results_for_prompt
 
 
 class DeepSearchAgent:
-    """Deep Search Agent主类"""
+    """Deep Search Agent main class"""
     
     def __init__(self, config: Optional[Settings] = None):
-        """
-        初始化Deep Search Agent
+        """Initialize Deep Search Agent
         
         Args:
-            config: 配置对象，如果不提供则自动加载
-        """
+            config: configuration object, automatically loaded if not provided"""
         self.config = config or settings
         
-        # 初始化LLM客户端
+        # Initialize LLM client
         self.llm_client = self._initialize_llm()
         
-        # 初始化搜索工具集
+        # Initialize the search toolset
         self.search_agency = BochaMultimodalSearch(api_key=(self.config.BOCHA_API_KEY or self.config.BOCHA_WEB_SEARCH_API_KEY))
         
-        # 初始化节点
+        # Initialize node
         self._initialize_nodes()
         
-        # 状态
+        # state
         self.state = State()
         
-        # 确保输出目录存在
+        # Make sure the output directory exists
         os.makedirs(self.config.OUTPUT_DIR, exist_ok=True)
         
-        logger.info(f"Media Agent已初始化")
-        logger.info(f"使用LLM: {self.llm_client.get_model_info()}")
-        logger.info(f"搜索工具集: BochaMultimodalSearch (支持5种多模态搜索工具)")
+        logger.info(f"Media Agent has been initialized")
+        logger.info(f"Using LLM: {self.llm_client.get_model_info()}")
+        logger.info(f"Search toolset: BochaMultimodalSearch (supports 5 multimodal search tools)")
     
     def _initialize_llm(self) -> LLMClient:
-        """初始化LLM客户端"""
+        """Initialize LLM client"""
         return LLMClient(
             api_key=(self.config.MEDIA_ENGINE_API_KEY or self.config.MINDSPIDER_API_KEY),
             model_name=(self.config.MEDIA_ENGINE_MODEL_NAME or self.config.MINDSPIDER_MODEL_NAME),
@@ -63,7 +59,7 @@ class DeepSearchAgent:
         )
     
     def _initialize_nodes(self):
-        """初始化处理节点"""
+        """Initialize processing node"""
         self.first_search_node = FirstSearchNode(self.llm_client)
         self.reflection_node = ReflectionNode(self.llm_client)
         self.first_summary_node = FirstSummaryNode(self.llm_client)
@@ -71,24 +67,22 @@ class DeepSearchAgent:
         self.report_formatting_node = ReportFormattingNode(self.llm_client)
     
     def _validate_date_format(self, date_str: str) -> bool:
-        """
-        验证日期格式是否为YYYY-MM-DD
+        """Verify that the date format is YYYY-MM-DD
         
         Args:
-            date_str: 日期字符串
+            date_str: date string
             
         Returns:
-            是否为有效格式
-        """
+            Is it a valid format?"""
         if not date_str:
             return False
         
-        # 检查格式
+        # Check format
         pattern = r'^\d{4}-\d{2}-\d{2}$'
         if not re.match(pattern, date_str):
             return False
         
-        # 检查日期是否有效
+        # Check if the date is valid
         try:
             datetime.strptime(date_str, '%Y-%m-%d')
             return True
@@ -96,23 +90,21 @@ class DeepSearchAgent:
             return False
     
     def execute_search_tool(self, tool_name: str, query: str, **kwargs) -> BochaResponse:
-        """
-        执行指定的搜索工具
+        """Execute the specified search tool
         
         Args:
-            tool_name: 工具名称，可选值：
-                - "comprehensive_search": 全面综合搜索（默认）
-                - "web_search_only": 纯网页搜索
-                - "search_for_structured_data": 结构化数据查询
-                - "search_last_24_hours": 24小时内最新信息
-                - "search_last_week": 本周信息
-            query: 搜索查询
-            **kwargs: 额外参数（如max_results）
+            tool_name: tool name, optional value:
+                -"comprehensive_search": Comprehensive comprehensive search (default)
+                -"web_search_only": Pure web search
+                -"search_for_structured_data": Structured data query
+                -"search_last_24_hours": Latest information within 24 hours
+                -"search_last_week": Information of the week
+            query: search query
+            **kwargs: additional parameters (such as max_results)
             
         Returns:
-            BochaResponse对象
-        """
-        logger.info(f"  → 执行搜索工具: {tool_name}")
+            BochaResponse object"""
+        logger.info(f"→ Execute search tool: {tool_name}")
         
         if tool_name == "comprehensive_search":
             max_results = kwargs.get("max_results", 10)
@@ -127,40 +119,38 @@ class DeepSearchAgent:
         elif tool_name == "search_last_week":
             return self.search_agency.search_last_week(query)
         else:
-            logger.info(f"  ⚠️  未知的搜索工具: {tool_name}，使用默认综合搜索")
+            logger.info(f"⚠️ Unknown search tool: {tool_name}, use the default comprehensive search")
             return self.search_agency.comprehensive_search(query)
     
     def research(self, query: str, save_report: bool = True) -> str:
-        """
-        执行深度研究
+        """Perform in-depth research
         
         Args:
-            query: 研究查询
-            save_report: 是否保存报告到文件
+            query: research query
+            save_report: whether to save the report to a file
             
         Returns:
-            最终报告内容
-        """
+            Final report content"""
         logger.info(f"\n{'='*60}")
-        logger.info(f"开始深度研究: {query}")
+        logger.info(f"Start in-depth research: {query}")
         logger.info(f"{'='*60}")
         
         try:
-            # Step 1: 生成报告结构
+            # Step 1: Generate report structure
             self._generate_report_structure(query)
             
-            # Step 2: 处理每个段落
+            # Step 2: Process each paragraph
             self._process_paragraphs()
             
-            # Step 3: 生成最终报告
+            # Step 3: Generate final report
             final_report = self._generate_final_report()
             
-            # Step 4: 保存报告
+            # Step 4: Save report
             if save_report:
                 self._save_report(final_report)
             
             logger.info(f"\n{'='*60}")
-            logger.info("深度研究完成！")
+            logger.info("In-depth research completed!")
             logger.info(f"{'='*60}")
             
             return final_report
@@ -168,101 +158,101 @@ class DeepSearchAgent:
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
-            logger.error(f"研究过程中发生错误: {str(e)} \n错误堆栈: {error_traceback}")
+            logger.error(f"An error occurred during research: {str(e)} \nError stack: {error_traceback}")
             raise e
     
     def _generate_report_structure(self, query: str):
-        """生成报告结构"""
-        logger.info(f"\n[步骤 1] 生成报告结构...")
+        """Generate report structure"""
+        logger.info(f"\n[Step 1] Generate report structure...")
         
-        # 创建报告结构节点
+        # Create report structure node
         report_structure_node = ReportStructureNode(self.llm_client, query)
         
-        # 生成结构并更新状态
+        # Generate structure and update status
         self.state = report_structure_node.mutate_state(state=self.state)
         
-        _message = f"报告结构已生成，共 {len(self.state.paragraphs)} 个段落:"
+        _message = f"The report structure has been generated, with {len(self.state.paragraphs)} paragraphs in total:"
         for i, paragraph in enumerate(self.state.paragraphs, 1):
             _message += f"\n  {i}. {paragraph.title}"
         logger.info(_message)
     
     def _process_paragraphs(self):
-        """处理所有段落"""
+        """process all paragraphs"""
         total_paragraphs = len(self.state.paragraphs)
         
         for i in range(total_paragraphs):
-            logger.info(f"\n[步骤 2.{i+1}] 处理段落: {self.state.paragraphs[i].title}")
+            logger.info(f"\n[Step 2.{i+1}] Process paragraphs: {self.state.paragraphs[i].title}")
             logger.info("-" * 50)
             
-            # 初始搜索和总结
+            # Initial search and summary
             self._initial_search_and_summary(i)
             
-            # 反思循环
+            # reflective cycle
             self._reflection_loop(i)
             
-            # 标记段落完成
+            # Mark paragraph complete
             self.state.paragraphs[i].research.mark_completed()
             
             progress = (i + 1) / total_paragraphs * 100
-            logger.info(f"段落处理完成 ({progress:.1f}%)")
+            logger.info(f"Paragraph processing completed ({progress:.1f}%)")
     
     def _initial_search_and_summary(self, paragraph_index: int):
-        """执行初始搜索和总结"""
+        """Perform initial search and summary"""
         paragraph = self.state.paragraphs[paragraph_index]
         
-        # 准备搜索输入
+        # Prepare search input
         search_input = {
             "title": paragraph.title,
             "content": paragraph.content
         }
         
-        # 生成搜索查询和工具选择
-        logger.info("  - 生成搜索查询...")
+        # Generate search queries and tool selections
+        logger.info("- Generate search queries...")
         search_output = self.first_search_node.run(search_input)
         search_query = search_output["search_query"]
-        search_tool = search_output.get("search_tool", "comprehensive_search")  # 默认工具
+        search_tool = search_output.get("search_tool", "comprehensive_search")  # Default tool
         reasoning = search_output["reasoning"]
         
-        logger.info(f"  - 搜索查询: {search_query}")
-        logger.info(f"  - 选择的工具: {search_tool}")
-        logger.info(f"  - 推理: {reasoning}")
+        logger.info(f"- Search query: {search_query}")
+        logger.info(f"- Selected tool: {search_tool}")
+        logger.info(f"- Reasoning: {reasoning}")
         
-        # 执行搜索
-        logger.info("  - 执行网络搜索...")
+        # Perform a search
+        logger.info("- Perform a web search...")
         
-        # 处理特殊参数（新的工具集不需要日期参数处理）
+        # Handle special parameters (new toolset does not require date parameter handling)
         search_kwargs = {}
         if search_tool in ["comprehensive_search", "web_search_only"]:
-            # 这些工具支持max_results参数
+            # These tools support the max_results parameter
             search_kwargs["max_results"] = 10
         
         search_response = self.execute_search_tool(search_tool, search_query, **search_kwargs)
         
-        # 转换为兼容格式
+        # Convert to compatible format
         search_results = []
         if search_response and search_response.webpages:
-            # 每种搜索工具都有其特定的结果数量，这里取前10个作为上限
+            # Each search tool has its specific number of results, here we take the top 10 as the upper limit
             max_results = min(len(search_response.webpages), 10)
             for result in search_response.webpages[:max_results]:
                 search_results.append({
                     'title': result.name,
                     'url': result.url,
                     'content': result.snippet,
-                    'score': None,  # Bocha API不提供score
+                    'score': None,  # Bocha API does not provide score
                     'raw_content': result.snippet,
-                    'published_date': result.date_last_crawled  # 使用爬取日期
+                    'published_date': result.date_last_crawled  # Use crawl date
                 })
         
         if search_results:
-            _message = f"  - 找到 {len(search_results)} 个搜索结果" 
+            _message = f"- {len(search_results)} search results found" 
             for j, result in enumerate(search_results, 1):
-                date_info = f" (发布于: {result.get('published_date', 'N/A')})" if result.get('published_date') else ""
+                date_info = f"(Published in: {result.get('published_date', 'N/A')})" if result.get('published_date') else ""
                 _message += f"\n    {j}. {result['title'][:50]}...{date_info}"
             logger.info(_message)
         else:
-            logger.info("  - 未找到搜索结果")
+            logger.info("- No search results found")
         
-        # 更新状态中的搜索历史
+        # Update search history in status
         paragraph.research.add_search_results(
             search_query,
             search_results,
@@ -270,8 +260,8 @@ class DeepSearchAgent:
             paragraph_title=paragraph.title,
         )
         
-        # 生成初始总结
-        logger.info("  - 生成初始总结...")
+        # Generate initial summary
+        logger.info("- Generate initial summary...")
         summary_input = {
             "title": paragraph.title,
             "content": paragraph.content,
@@ -281,71 +271,71 @@ class DeepSearchAgent:
             )
         }
         
-        # 更新状态
+        # update status
         self.state = self.first_summary_node.mutate_state(
             summary_input, self.state, paragraph_index
         )
         
-        logger.info("  - 初始总结完成")
+        logger.info("- Initial summary completed")
     
     def _reflection_loop(self, paragraph_index: int):
-        """执行反思循环"""
+        """Execute a reflective cycle"""
         paragraph = self.state.paragraphs[paragraph_index]
         
         for reflection_i in range(self.config.MAX_REFLECTIONS):
-            logger.info(f"  - 反思 {reflection_i + 1}/{self.config.MAX_REFLECTIONS}...")
+            logger.info(f"- reflection {reflection_i + 1}/{self.config.MAX_REFLECTIONS}...")
             
-            # 准备反思输入
+            # Prepare reflective input
             reflection_input = {
                 "title": paragraph.title,
                 "content": paragraph.content,
                 "paragraph_latest_state": paragraph.research.latest_summary
             }
             
-            # 生成反思搜索查询
+            # Generate reflective search queries
             reflection_output = self.reflection_node.run(reflection_input)
             search_query = reflection_output["search_query"]
-            search_tool = reflection_output.get("search_tool", "comprehensive_search")  # 默认工具
+            search_tool = reflection_output.get("search_tool", "comprehensive_search")  # Default tool
             reasoning = reflection_output["reasoning"]
             
-            logger.info(f"    反思查询: {search_query}")
-            logger.info(f"    选择的工具: {search_tool}")
-            logger.info(f"    反思推理: {reasoning}")
+            logger.info(f"Reflection query: {search_query}")
+            logger.info(f"Selected tool: {search_tool}")
+            logger.info(f"reflective reasoning: {reasoning}")
             
-            # 执行反思搜索
-            # 处理特殊参数
+            # Perform a reflective search
+            # Handle special parameters
             search_kwargs = {}
             if search_tool in ["comprehensive_search", "web_search_only"]:
-                # 这些工具支持max_results参数
+                # These tools support the max_results parameter
                 search_kwargs["max_results"] = 10
             
             search_response = self.execute_search_tool(search_tool, search_query, **search_kwargs)
             
-            # 转换为兼容格式
+            # Convert to compatible format
             search_results = []
             if search_response and search_response.webpages:
-                # 每种搜索工具都有其特定的结果数量，这里取前10个作为上限
+                # Each search tool has its specific number of results, here we take the top 10 as the upper limit
                 max_results = min(len(search_response.webpages), 10)
                 for result in search_response.webpages[:max_results]:
                     search_results.append({
                         'title': result.name,
                         'url': result.url,
                         'content': result.snippet,
-                        'score': None,  # Bocha API不提供score
+                        'score': None,  # Bocha API does not provide score
                         'raw_content': result.snippet,
                         'published_date': result.date_last_crawled
                     })
             
             if search_results:
-                _message = f"    找到 {len(search_results)} 个反思搜索结果"
+                _message = f"Found {len(search_results)} reflection search results"
                 for j, result in enumerate(search_results, 1):
-                    date_info = f" (发布于: {result.get('published_date', 'N/A')})" if result.get('published_date') else ""
+                    date_info = f"(Published in: {result.get('published_date', 'N/A')})" if result.get('published_date') else ""
                     _message += f"\n      {j}. {result['title'][:50]}...{date_info}"
                 logger.info(_message)
             else:
-                logger.info("    未找到反思搜索结果")
+                logger.info("No reflection search results found")
             
-            # 更新搜索历史
+            # Update search history
             paragraph.research.add_search_results(
                 search_query,
                 search_results,
@@ -353,7 +343,7 @@ class DeepSearchAgent:
                 paragraph_title=paragraph.title,
             )
             
-            # 生成反思总结
+            # Generate reflection summaries
             reflection_summary_input = {
                 "title": paragraph.title,
                 "content": paragraph.content,
@@ -364,18 +354,18 @@ class DeepSearchAgent:
                 "paragraph_latest_state": paragraph.research.latest_summary
             }
             
-            # 更新状态
+            # update status
             self.state = self.reflection_summary_node.mutate_state(
                 reflection_summary_input, self.state, paragraph_index
             )
             
-            logger.info(f"    反思 {reflection_i + 1} 完成")
+            logger.info(f"Reflection {reflection_i + 1} completed")
     
     def _generate_final_report(self) -> str:
-        """生成最终报告"""
-        logger.info(f"\n[步骤 3] 生成最终报告...")
+        """Generate final report"""
+        logger.info(f"\n[Step 3] Generate final report...")
         
-        # 准备报告数据
+        # Prepare reporting data
         report_data = []
         for paragraph in self.state.paragraphs:
             report_data.append({
@@ -383,25 +373,25 @@ class DeepSearchAgent:
                 "paragraph_latest_state": paragraph.research.latest_summary
             })
         
-        # 格式化报告
+        # Format reports
         try:
             final_report = self.report_formatting_node.run(report_data)
         except Exception as e:
-            logger.info(f"LLM格式化失败，使用备用方法: {str(e)}")
+            logger.info(f"LLM format failed, use fallback method: {str(e)}")
             final_report = self.report_formatting_node.format_report_manually(
                 report_data, self.state.report_title
             )
         
-        # 更新状态
+        # update status
         self.state.final_report = final_report
         self.state.mark_completed()
         
-        logger.info("最终报告生成完成")
+        logger.info("Final report generation completed")
         return final_report
     
     def _save_report(self, report_content: str):
-        """保存报告到文件"""
-        # 生成文件名
+        """Save report to file"""
+        # Generate file name
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         query_safe = "".join(c for c in self.state.query if c.isalnum() or c in (' ', '-', '_')).rstrip()
         query_safe = query_safe.replace(' ', '_')[:30]
@@ -409,75 +399,73 @@ class DeepSearchAgent:
         filename = f"deep_search_report_{query_safe}_{timestamp}.md"
         filepath = os.path.join(self.config.OUTPUT_DIR, filename)
         
-        # 保存报告
+        # save report
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(report_content)
         
-        logger.info(f"报告已保存到: {filepath}")
+        logger.info(f"Report saved to: {filepath}")
         
-        # 保存状态（如果配置允许）
+        # Save state (if configuration allows)
         if self.config.SAVE_INTERMEDIATE_STATES:
             state_filename = f"state_{query_safe}_{timestamp}.json"
             state_filepath = os.path.join(self.config.OUTPUT_DIR, state_filename)
             self.state.save_to_file(state_filepath)
-            logger.info(f"状态已保存到: {state_filepath}")
+            logger.info(f"State saved to: {state_filepath}")
     
     def get_progress_summary(self) -> Dict[str, Any]:
-        """获取进度摘要"""
+        """Get progress summary"""
         return self.state.get_progress_summary()
     
     def load_state(self, filepath: str):
-        """从文件加载状态"""
+        """Load status from file"""
         self.state = State.load_from_file(filepath)
-        logger.info(f"状态已从 {filepath} 加载")
+        logger.info(f"Status loaded from {filepath}")
     
     def save_state(self, filepath: str):
-        """保存状态到文件"""
+        """Save state to file"""
         self.state.save_to_file(filepath)
-        logger.info(f"状态已保存到 {filepath}")
+        logger.info(f"Status saved to {filepath}")
 
 class AnspireSearchAgent(DeepSearchAgent):
-    """调用Anspire搜索引擎的Deep Search Agent"""
+    """Call the Deep Search Agent of Anspire search engine"""
     
     def __init__(self, config: Settings | None = None):
         self.config = config or settings
         
-        # 初始化LLM客户端
+        # Initialize LLM client
         self.llm_client = self._initialize_llm()
         
-        # 初始化搜索工具集
+        # Initialize the search toolset
         self.search_agency = AnspireAISearch(api_key=self.config.ANSPIRE_API_KEY)
 
-        # 初始化节点
+        # Initialize node
         self._initialize_nodes()
         
-        # 状态
+        # state
         self.state = State()
         
-        # 确保输出目录存在
+        # Make sure the output directory exists
         os.makedirs(self.config.OUTPUT_DIR, exist_ok=True)
         
-        logger.info(f"Media Agent已初始化")
-        logger.info(f"使用LLM: {self.llm_client.get_model_info()}")
-        logger.info(f"搜索工具集: AnspireSearch")
+        logger.info(f"Media Agent has been initialized")
+        logger.info(f"Using LLM: {self.llm_client.get_model_info()}")
+        logger.info(f"Search toolset: AnspireSearch")
 
     def execute_search_tool(self, tool_name: str, query: str, **kwargs) -> AnspireResponse:
-        # TODO: 使用Anspire搜索工具执行搜索
-        """
-        执行指定的搜索工具
+        # TODO: Perform a search using the Anspire search tool
+        """Execute the specified search tool
         
         Args:
-            tool_name: 工具名称，可选值：
-                - "comprehensive_search": 全面综合搜索（默认）
-                - "search_last_24_hours": 24小时内最新信息
-                - "search_last_week": 本周信息
-            query: 搜索查询
-            **kwargs: 额外参数（如max_results）
+            tool_name: tool name, optional value:
+                -"comprehensive_search": Comprehensive comprehensive search (default)
+                -"search_last_24_hours": Latest information within 24 hours
+                -"search_last_week": Information of the week
+            query: search query
+            **kwargs: additional parameters (such as max_results)
             
         Returns:
-            AnspireResponse对象
-        """
-        logger.info(f"  → 执行搜索工具: {tool_name}")
+            AnspireResponse object"""
+        logger.info(f"→ Execute search tool: {tool_name}")
         
         if tool_name == "comprehensive_search":
             max_results = kwargs.get("max_results", 10)
@@ -487,20 +475,18 @@ class AnspireSearchAgent(DeepSearchAgent):
         elif tool_name == "search_last_week":
             return self.search_agency.search_last_week(query)
         else:
-            logger.info(f"  ⚠️  未知的搜索工具: {tool_name}，使用默认综合搜索")
+            logger.info(f"⚠️ Unknown search tool: {tool_name}, use the default comprehensive search")
             return self.search_agency.comprehensive_search(query)
 
 
 def create_agent(config_file: Optional[str] = None) -> DeepSearchAgent:
-    """
-    创建Deep Search Agent实例的便捷函数
+    """Convenience functions for creating Deep Search Agent instances
     
     Args:
-        config_file: 配置文件路径
+        config_file: configuration file path
         
     Returns:
-        DeepSearchAgent实例
-    """
+        DeepSearchAgent instance"""
     settings = Settings()
     if settings.SEARCH_TOOL_TYPE == "AnspireAPI":
         return AnspireSearchAgent(settings)

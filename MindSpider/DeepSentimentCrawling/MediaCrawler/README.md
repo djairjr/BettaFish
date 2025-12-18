@@ -1,4 +1,4 @@
-# 🔥 MediaCrawler - 自媒体平台爬虫 🕷️
+# 🔥 MediaCrawler - self-media platform crawler 🕷️
 
 <div align="center" markdown="1">
    <sup>Special thanks to:</sup>
@@ -25,236 +25,236 @@
 [![GitHub Issues](https://img.shields.io/github/issues/NanmiCoder/MediaCrawler)](https://github.com/NanmiCoder/MediaCrawler/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/NanmiCoder/MediaCrawler)](https://github.com/NanmiCoder/MediaCrawler/pulls)
 [![License](https://img.shields.io/github/license/NanmiCoder/MediaCrawler)](https://github.com/NanmiCoder/MediaCrawler/blob/main/LICENSE)
-[![中文](https://img.shields.io/badge/🇨🇳_中文-当前-blue)](README.md)
+[![中文](https://img.shields.io/badge/🇨🇳_中文-current-blue)](README.md)
 [![English](https://img.shields.io/badge/🇺🇸_English-Available-green)](README_en.md)
 [![Español](https://img.shields.io/badge/🇪🇸_Español-Available-green)](README_es.md)
 </div>
 
 
 
-> **免责声明：**
+> **Disclaimer:**
 > 
-> 大家请以学习为目的使用本仓库⚠️⚠️⚠️⚠️，[爬虫违法违规的案件](https://github.com/HiddenStrawberry/Crawler_Illegal_Cases_In_China)  <br>
+> Please use this repository for learning purposes ⚠️⚠️⚠️⚠️, [Crawler illegal cases](https://github.com/HiddenStrawberry/Crawler_Illegal_Cases_In_China) <br>
 >
->本仓库的所有内容仅供学习和参考之用，禁止用于商业用途。任何人或组织不得将本仓库的内容用于非法用途或侵犯他人合法权益。本仓库所涉及的爬虫技术仅用于学习和研究，不得用于对其他平台进行大规模爬虫或其他非法行为。对于因使用本仓库内容而引起的任何法律责任，本仓库不承担任何责任。使用本仓库的内容即表示您同意本免责声明的所有条款和条件。
+>All contents in this warehouse are for learning and reference only and are not allowed to be used for commercial purposes. No person or organization may use the contents of this warehouse for illegal purposes or infringe upon the legitimate rights and interests of others. The crawler technology involved in this warehouse is only used for learning and research, and may not be used to conduct large-scale crawling of other platforms or other illegal activities. This warehouse does not assume any responsibility for any legal liability arising from the use of the contents of this warehouse. By using the content of this repository, you agree to all terms and conditions of this disclaimer.
 >
-> 点击查看更为详细的免责声明。[点击跳转](#disclaimer)
+> Click for a more detailed disclaimer. [Click to jump](#disclaimer)
 
 
 
 
-## 📖 项目简介
+## 📖Project Introduction
 
-一个功能强大的**多平台自媒体数据采集工具**，支持小红书、抖音、快手、B站、微博、贴吧、知乎等主流平台的公开信息抓取。
+A powerful **multi-platform self-media data collection tool** that supports the capture of public information from mainstream platforms such as Xiaohongshu, Douyin, Kuaishou, Bilibili, Weibo, Tieba, and Zhihu.
 
-### 🔧 技术原理
+### 🔧 Technical principles
 
-- **核心技术**：基于 [Playwright](https://playwright.dev/) 浏览器自动化框架登录保存登录态
-- **无需JS逆向**：利用保留登录态的浏览器上下文环境，通过 JS 表达式获取签名参数
-- **优势特点**：无需逆向复杂的加密算法，大幅降低技术门槛
+- **Core Technology**: Based on [Playwright](https://playwright.dev/) browser automation framework login to save login status
+- **No need for JS reverse engineering**: Use the browser context that retains the login state to obtain signature parameters through JS expressions
+- **Advantages**: No need to reverse complex encryption algorithms, greatly reducing the technical threshold
 
-## ✨ 功能特性
-| 平台   | 关键词搜索 | 指定帖子ID爬取 | 二级评论 | 指定创作者主页 | 登录态缓存 | IP代理池 | 生成评论词云图 |
+## ✨ Features
+| Platform | Keyword search | Crawling of specified post ID | Secondary comments | Specified creator homepage | Login state cache | IP proxy pool | Generate comment word cloud |
 | ------ | ---------- | -------------- | -------- | -------------- | ---------- | -------- | -------------- |
-| 小红书 | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 抖音   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 快手   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| B 站   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 微博   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 贴吧   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 知乎   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
+| Little Red Book | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tik Tok | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Kuaishou | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Bilibili | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Weibo | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tieba | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Zhihu | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 
 
-### 🚀 MediaCrawlerPro 重磅发布！
+### 🚀 MediaCrawlerPro is released!
 
-> 专注于学习成熟项目的架构设计，不仅仅是爬虫技术，Pro 版本的代码设计思路同样值得深入学习！
+> Focus on learning the architecture design of mature projects, not just crawler technology, the code design ideas of the Pro version are also worth learning in depth!
 
-[MediaCrawlerPro](https://github.com/MediaCrawlerPro) 相较于开源版本的核心优势：
+The core advantages of [MediaCrawlerPro](https://github.com/MediaCrawlerPro) compared to the open source version:
 
-#### 🎯 核心功能升级
-- ✅ **断点续爬功能**（重点特性）
-- ✅ **多账号 + IP代理池支持**（重点特性）
-- ✅ **去除 Playwright 依赖**，使用更简单
-- ✅ **完整 Linux 环境支持**
+#### 🎯Core function upgrade
+- ✅ **Breakpoint resume function** (key feature)
+- ✅ **Multiple accounts + IP proxy pool support** (key features)
+- ✅ **Remove Playwright dependency**, easier to use
+- ✅ **Full Linux environment support**
 
-#### 🏗️ 架构设计优化
-- ✅ **代码重构优化**，更易读易维护（解耦 JS 签名逻辑）
-- ✅ **企业级代码质量**，适合构建大型爬虫项目
-- ✅ **完美架构设计**，高扩展性，源码学习价值更大
+#### 🏗️ Architecture design optimization
+- ✅ **Code refactoring and optimization**, easier to read and maintain (decoupled JS signature logic)
+- ✅ **Enterprise-level code quality**, suitable for building large-scale crawler projects
+- ✅ **Perfect architecture design**, high scalability, greater source code learning value
 
-#### 🎁 额外功能
-- ✅ **自媒体视频下载器桌面端**（适合学习全栈开发）
-- ✅ **多平台首页信息流推荐**（HomeFeed）
-- [ ] **基于自媒体平台的AI Agent正在开发中 🚀🚀**
+#### 🎁 Extra features
+- ✅ **Self-media video downloader desktop** (suitable for learning full-stack development)
+- ✅ **Multi-platform homepage information flow recommendation** (HomeFeed)
+- [ ] **AI Agent based on self-media platform is under development 🚀🚀**
 
-点击查看：[MediaCrawlerPro 项目主页](https://github.com/MediaCrawlerPro) 更多介绍
+Click to view: [MediaCrawlerPro project homepage](https://github.com/MediaCrawlerPro) More introduction
 
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-> 💡 **开源不易，如果这个项目对您有帮助，请给个 ⭐ Star 支持一下！**
+> 💡 **Open source is not easy. If this project is helpful to you, please give it a ⭐ Star to support it! **
 
-## 📋 前置依赖
+## 📋 Prerequisites
 
-### 🚀 uv 安装（推荐）
+### 🚀 uv installation (recommended)
 
-在进行下一步操作之前，请确保电脑上已经安装了 uv：
+Before proceeding to the next step, please make sure that uv is installed on your computer:
 
-- **安装地址**：[uv 官方安装指南](https://docs.astral.sh/uv/getting-started/installation)
-- **验证安装**：终端输入命令 `uv --version`，如果正常显示版本号，证明已经安装成功
-- **推荐理由**：uv 是目前最强的 Python 包管理工具，速度快、依赖解析准确
+- **Installation address**: [uv official installation guide](https://docs.astral.sh/uv/getting-started/installation)
+- **Verify installation**: Enter the command `uv --version` in the terminal. If the version number is displayed normally, it proves that the installation has been successful.
+- **Reason for recommendation**: uv is currently the most powerful Python package management tool, with fast speed and accurate dependency analysis.
 
-### 🟢 Node.js 安装
+### 🟢 Node.js installation
 
-项目依赖 Node.js，请前往官网下载安装：
+The project depends on Node.js, please go to the official website to download and install:
 
-- **下载地址**：https://nodejs.org/en/download/
-- **版本要求**：>= 16.0.0
+- **Download address**: https://nodejs.org/en/download/
+- **Version Requirements**: >= 16.0.0
 
-### 📦 Python 包安装
+### 📦 Python package installation
 
 ```shell
-# 进入项目目录
+# Enter the project directory
 cd MediaCrawler
 
-# 使用 uv sync 命令来保证 python 版本和相关依赖包的一致性
+# Use the uv sync command to ensure the consistency of the python version and related dependency packages
 uv sync
 ```
 
-### 🌐 浏览器驱动安装
+### 🌐 Browser driver installation
 
 ```shell
-# 安装浏览器驱动
+#Install browser driver
 uv run playwright install
 ```
 
-> **💡 提示**：MediaCrawler 目前已经支持使用 playwright 连接你本地的 Chrome 浏览器了，一些因为 Webdriver 导致的问题迎刃而解了。
+> **💡 Tip**: MediaCrawler now supports using playwright to connect to your local Chrome browser, and some problems caused by Webdriver have been solved.
 >
-> 目前开放了 `xhs` 和 `dy` 这两个使用 CDP 的方式连接本地浏览器，如有需要，查看 `config/base_config.py` 中的配置项。
+> Currently, `xhs` and `dy` are enabled to use CDP to connect to local browsers. If necessary, check the configuration items in `config/base_config.py`.
 
-## 🚀 运行爬虫程序
+## 🚀 Run the crawler program
 
 ```shell
-# 项目默认是没有开启评论爬取模式，如需评论请在 config/base_config.py 中的 ENABLE_GET_COMMENTS 变量修改
-# 一些其他支持项，也可以在 config/base_config.py 查看功能，写的有中文注释
+# The project does not enable comment crawling mode by default. If you need comments, please modify the ENABLE_GET_COMMENTS variable in config/base_config.py
+# For some other support items, you can also view the functions in config/base_config.py, which are written with Chinese comments.
 
-# 从配置文件中读取关键词搜索相关的帖子并爬取帖子信息与评论
+# Read keywords from the configuration file to search for related posts and crawl post information and comments
 uv run main.py --platform xhs --lt qrcode --type search
 
-# 从配置文件中读取指定的帖子ID列表获取指定帖子的信息与评论信息
+# Read the specified post ID list from the configuration file to obtain the information and comment information of the specified post.
 uv run main.py --platform xhs --lt qrcode --type detail
 
-# 打开对应APP扫二维码登录
+# Open the corresponding APP and scan the QR code to log in
 
-# 其他平台爬虫使用示例，执行下面的命令查看
+# For other platform crawler usage examples, execute the following command to view
 uv run main.py --help
 ```
 
 <details>
-<summary>🔗 <strong>使用 Python 原生 venv 管理环境（不推荐）</strong></summary>
+<summary>🔗 <strong>Use Python native venv to manage the environment (not recommended)</strong></summary>
 
-#### 创建并激活 Python 虚拟环境
+#### Create and activate Python virtual environment
 
-> 如果是爬取抖音和知乎，需要提前安装 nodejs 环境，版本大于等于：`16` 即可
+> If you are crawling Douyin and Zhihu, you need to install the nodejs environment in advance. The version is greater than or equal to: `16`.
 
 ```shell
-# 进入项目根目录
+# Enter the project root directory
 cd MediaCrawler
 
-# 创建虚拟环境
-# 我的 python 版本是：3.9.6，requirements.txt 中的库是基于这个版本的
-# 如果是其他 python 版本，可能 requirements.txt 中的库不兼容，需自行解决
+#Create virtual environment
+# My python version is: 3.9.6, the library in requirements.txt is based on this version
+# If it is another python version, the library in requirements.txt may be incompatible, and you need to solve it yourself.
 python -m venv venv
 
-# macOS & Linux 激活虚拟环境
+# macOS & Linux Activate virtual environment
 source venv/bin/activate
 
-# Windows 激活虚拟环境
+# Windows activate virtual environment
 venv\Scripts\activate
 ```
 
-#### 安装依赖库
+#### Install dependent libraries
 
 ```shell
 pip install -r requirements.txt
 ```
 
-#### 安装 playwright 浏览器驱动
+#### Install playwright browser driver
 
 ```shell
 playwright install
 ```
 
-#### 运行爬虫程序（原生环境）
+#### Run the crawler program (native environment)
 
 ```shell
-# 项目默认是没有开启评论爬取模式，如需评论请在 config/base_config.py 中的 ENABLE_GET_COMMENTS 变量修改
-# 一些其他支持项，也可以在 config/base_config.py 查看功能，写的有中文注释
+# The project does not enable comment crawling mode by default. If you need comments, please modify the ENABLE_GET_COMMENTS variable in config/base_config.py
+# For some other support items, you can also view the functions in config/base_config.py, which are written with Chinese comments.
 
-# 从配置文件中读取关键词搜索相关的帖子并爬取帖子信息与评论
+# Read keywords from the configuration file to search for related posts and crawl post information and comments
 python main.py --platform xhs --lt qrcode --type search
 
-# 从配置文件中读取指定的帖子ID列表获取指定帖子的信息与评论信息
+# Read the specified post ID list from the configuration file to obtain the information and comment information of the specified post.
 python main.py --platform xhs --lt qrcode --type detail
 
-# 打开对应APP扫二维码登录
+# Open the corresponding APP and scan the QR code to log in
 
-# 其他平台爬虫使用示例，执行下面的命令查看
+# For other platform crawler usage examples, execute the following command to view
 python main.py --help
 ```
 
 </details>
 
 
-## 💾 数据保存
+## 💾 Data Saving
 
-支持多种数据存储方式：
-- **CSV 文件**：支持保存到 CSV 中（`data/` 目录下）
-- **JSON 文件**：支持保存到 JSON 中（`data/` 目录下）
-- **数据库存储**
-  - 使用参数 `--init_db` 进行数据库初始化（使用`--init_db`时不需要携带其他optional）
-  - **SQLite 数据库**：轻量级数据库，无需服务器，适合个人使用（推荐）
-    1. 初始化：`--init_db sqlite`
-    2. 数据存储：`--save_data_option sqlite`
-  - **MySQL 数据库**：支持关系型数据库 MySQL 中保存（需要提前创建数据库）
-    1. 初始化：`--init_db mysql`
-    2. 数据存储：`--save_data_option db`（db 参数为兼容历史更新保留）
+Supports multiple data storage methods:
+- **CSV file**: supports saving to CSV (under the `data/` directory)
+- **JSON file**: supports saving to JSON (under the `data/` directory)
+- **Database Storage**
+- Use parameter `--init_db` for database initialization (no need to carry other optionals when using `--init_db`)
+- **SQLite database**: lightweight database, no server required, suitable for personal use (recommended)
+1. Initialization: `--init_db sqlite`
+2. Data storage: `--save_data_option sqlite`
+- **MySQL database**: Supports saving in relational database MySQL (the database needs to be created in advance)
+1. Initialization: `--init_db mysql`
+2. Data storage: `--save_data_option db` (the db parameter is reserved for compatibility with historical updates)
 
 
-### 使用示例：
+### Usage example:
 ```shell
-# 初始化 SQLite 数据库（使用'--init_db'时不需要携带其他optional）
+# Initialize the SQLite database (no need to carry other optionals when using '--init_db')
 uv run main.py --init_db sqlite
-# 使用 SQLite 存储数据（推荐个人用户使用）
+# Use SQLite to store data (recommended for individual users)
 uv run main.py --platform xhs --lt qrcode --type search --save_data_option sqlite
 ```
 ```shell
-# 初始化 MySQL 数据库
+# Initialize MySQL database
 uv run main.py --init_db mysql
-# 使用 MySQL 存储数据（为适配历史更新，db参数进行沿用）
+# Use MySQL to store data (to adapt to historical updates, the db parameter will be used)
 uv run main.py --platform xhs --lt qrcode --type search --save_data_option db
 ```
 
 
-[🚀 MediaCrawlerPro 重磅发布 🚀！更多的功能，更好的架构设计！](https://github.com/MediaCrawlerPro)
+[🚀 MediaCrawlerPro big release 🚀! More functions, better architectural design! ](https://github.com/MediaCrawlerPro)
 
 
-### 💬 交流群组
-- **微信交流群**：[点击加入](https://nanmicoder.github.io/MediaCrawler/%E5%BE%AE%E4%BF%A1%E4%BA%A4%E6%B5%81%E7%BE%A4.html)
+### 💬 Communication group
+- **WeChat communication group**: [Click to join](https://nanmicoder.github.io/MediaCrawler/%E5%BE%AE%E4%BF%A1%E4%BA%A4%E6%B5%81%E7%BE%A4.html)
 
-### 📚 其他
-- **常见问题**：[MediaCrawler 完整文档](https://nanmicoder.github.io/MediaCrawler/)
-- **爬虫入门教程**：[CrawlerTutorial 免费教程](https://github.com/NanmiCoder/CrawlerTutorial)
-- **新闻爬虫开源项目**：[NewsCrawlerCollection](https://github.com/NanmiCoder/NewsCrawlerCollection)
+### 📚 Others
+- **FAQ**: [MediaCrawler full documentation](https://nanmicoder.github.io/MediaCrawler/)
+- **Introduction to crawler tutorial**: [CrawlerTutorial free tutorial](https://github.com/NanmiCoder/CrawlerTutorial)
+- **News crawler open source project**: [NewsCrawlerCollection](https://github.com/NanmiCoder/NewsCrawlerCollection)
 ---
 
-### 💰 赞助商展示
+### 💰 Sponsor Showcase
 
 <a href="https://h.wandouip.com">
 <img src="docs/static/images/img_8.jpg">
 <br>
-豌豆HTTP自营千万级IP资源池，IP纯净度≥99.8%，每日保持IP高频更新，快速响应，稳定连接,满足多种业务场景，支持按需定制，注册免费提取10000ip。
+Wandou HTTP operates a tens-of-million-level IP resource pool with an IP purity of ≥99.8%. It maintains high-frequency IP updates every day, provides fast response, and stable connections to meet a variety of business scenarios. It supports on-demand customization and registers to extract 10,000 IPs for free.
 </a>
 
 ---
@@ -265,17 +265,17 @@ uv run main.py --platform xhs --lt qrcode --type search --save_data_option db
   </a>
 </p>
 
-[TikHub](https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad) 提供超过 **700 个端点**，可用于从 **14+ 个社交媒体平台** 获取与分析数据 —— 包括视频、用户、评论、商店、商品与趋势等，一站式完成所有数据访问与分析。
+[TikHub](https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad) provides over **700 endpoints** for obtaining and analyzing data from **14+ social media platforms** —— Including videos, users, comments, stores, products and trends, etc., complete all data access and analysis in one stop.
 
-通过每日签到，可以获取免费额度。可以使用我的注册链接：[https://user.tikhub.io/users/signup?referral_code=cfzyejV9](https://user.tikhub.io/users/signup?referral_code=cfzyejV9&utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad) 或使用邀请码：`cfzyejV9`，注册并充值即可获得 **$2 免费额度**。
+By checking in every day, you can get free quota. You can use my registration link: [https://user.tikhub.io/users/signup?referral_code=cfzyejV9](https://user.tikhub.io/users/signup?referral_code=cfzye jV9&utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad) Or use the invitation code: `cfzyejV9`, register and recharge to get **$2 free credit**.
 
-[TikHub](https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad) 提供以下服务：
+[TikHub](https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad) provides the following services:
 
-- 🚀 丰富的社交媒体数据接口（TikTok、Douyin、XHS、YouTube、Instagram等）
-- 💎 每日签到免费领取额度
-- ⚡ 高成功率与高并发支持
-- 🌐 官网：[https://tikhub.io/](https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad)
-- 💻 GitHub地址：[https://github.com/TikHubIO/](https://github.com/TikHubIO/)
+- 🚀 Rich social media data interface (TikTok, Douyin, XHS, YouTube, Instagram, etc.)
+- 💎 Sign in daily to receive free quota
+- ⚡ High success rate and high concurrency support
+- 🌐 Official website: [https://tikhub.io/](https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad)
+- 💻 GitHub address: [https://github.com/TikHubIO/](https://github.com/TikHubIO/)
 
 ---
 <p align="center">
@@ -284,59 +284,59 @@ uv run main.py --platform xhs --lt qrcode --type search --save_data_option db
   </a>
 </p>
 
-Nstbrowser 指纹浏览器 — 多账号运营&自动化管理的最佳解决方案
+Nstbrowser fingerprint browser - the best solution for multi-account operation & automated management
 <br>
-多账号安全管理与会话隔离；指纹定制结合反检测浏览器环境，兼顾真实度与稳定性；覆盖店铺管理、电商监控、社媒营销、广告验证、Web3、投放监控与联盟营销等业务线；提供生产级并发与定制化企业服务；提供可一键部署的云端浏览器方案，配套全球高质量 IP 池，为您构建长期行业竞争力
+Multi-account security management and session isolation; fingerprint customization combined with anti-detection browser environment, taking into account authenticity and stability; covering business lines such as store management, e-commerce monitoring, social media marketing, ad verification, Web3, delivery monitoring and affiliate marketing; providing production-level concurrency and customized enterprise services; providing a cloud browser solution that can be deployed with one click, supporting a global high-quality IP pool, to build your long-term industry competitiveness
 <br>
-[点击此处即刻开始免费使用](https://app.nstbrowser.io/account/register?utm_source=official&utm_term=mediacrawler)
+[Click here to start using it for free now](https://app.nstbrowser.io/account/register?utm_source=official&utm_term=mediacrawler)
 <br>
-使用 NSTBROWSER 可获得 10% 充值赠礼
+Use NSTBROWSER to get 10% recharge gift
 
 
 
-### 🤝 成为赞助者
+### 🤝 Become a sponsor
 
-成为赞助者，可以将您的产品展示在这里，每天获得大量曝光！
+Become a patron and get your products featured here and get tons of exposure every day!
 
-**联系方式**：
-- 微信：`relakkes`
-- 邮箱：`relakkes@gmail.com`
+**Contact Information**:
+- WeChat: `relakkes`
+- Email: `relakkes@gmail.com`
 
 ---
 
-## ⭐ Star 趋势图
+## ⭐ Star Trend Chart
 
-如果这个项目对您有帮助，请给个 ⭐ Star 支持一下，让更多的人看到 MediaCrawler！
+If this project is helpful to you, please give a ⭐ Star to support it and let more people see MediaCrawler!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=NanmiCoder/MediaCrawler&type=Date)](https://star-history.com/#NanmiCoder/MediaCrawler&Date)
 
 
 
-## 📚 参考
+## 📚 Reference
 
-- **小红书客户端**：[ReaJason 的 xhs 仓库](https://github.com/ReaJason/xhs)
-- **短信转发**：[SmsForwarder 参考仓库](https://github.com/pppscn/SmsForwarder)
-- **内网穿透工具**：[ngrok 官方文档](https://ngrok.com/docs/)
+- **Xiaohongshu client**: [ReaJason’s xhs warehouse](https://github.com/ReaJason/xhs)
+- **SMS forwarding**: [SmsForwarder reference warehouse](https://github.com/pppscn/SmsForwarder)
+- **Intranet penetration tool**: [ngrok official document](https://ngrok.com/docs/)
 
 
-# 免责声明
+# Disclaimer
 <div id="disclaimer"> 
 
-## 1. 项目目的与性质
-本项目（以下简称“本项目”）是作为一个技术研究与学习工具而创建的，旨在探索和学习网络数据采集技术。本项目专注于自媒体平台的数据爬取技术研究，旨在提供给学习者和研究者作为技术交流之用。
+## 1. Project purpose and nature
+This project (hereinafter referred to as "the project") was created as a technical research and learning tool to explore and learn network data collection technology. This project focuses on the research on data crawling technology of self-media platforms, aiming to provide it to learners and researchers for technical communication purposes.
 
-## 2. 法律合规性声明
-本项目开发者（以下简称“开发者”）郑重提醒用户在下载、安装和使用本项目时，严格遵守中华人民共和国相关法律法规，包括但不限于《中华人民共和国网络安全法》、《中华人民共和国反间谍法》等所有适用的国家法律和政策。用户应自行承担一切因使用本项目而可能引起的法律责任。
+## 2. Legal Compliance Statement
+The developer of this project (hereinafter referred to as the "Developer") solemnly reminds users to strictly abide by the relevant laws and regulations of the People's Republic of China when downloading, installing and using this project, including but not limited to the "Cybersecurity Law of the People's Republic of China", the "Counterespionage Law of the People's Republic of China" and all applicable national laws and policies. The user shall bear all legal responsibilities that may arise from the use of this project.
 
-## 3. 使用目的限制
-本项目严禁用于任何非法目的或非学习、非研究的商业行为。本项目不得用于任何形式的非法侵入他人计算机系统，不得用于任何侵犯他人知识产权或其他合法权益的行为。用户应保证其使用本项目的目的纯属个人学习和技术研究，不得用于任何形式的非法活动。
+## 3. Restrictions on purpose of use
+This project is strictly prohibited from being used for any illegal purposes or commercial activities other than learning or research. This project may not be used for any form of illegal intrusion into other people's computer systems, or for any infringement of other people's intellectual property rights or other legitimate rights and interests. Users should ensure that their use of this project is purely for personal study and technical research and shall not be used for any form of illegal activities.
 
-## 4. 免责声明
-开发者已尽最大努力确保本项目的正当性及安全性，但不对用户使用本项目可能引起的任何形式的直接或间接损失承担责任。包括但不限于由于使用本项目而导致的任何数据丢失、设备损坏、法律诉讼等。
+## 4. Disclaimer
+The developer has tried its best to ensure the legitimacy and safety of this project, but is not responsible for any form of direct or indirect losses that may be caused by the user's use of this project. Including but not limited to any data loss, equipment damage, legal proceedings, etc. resulting from the use of this project.
 
-## 5. 知识产权声明
-本项目的知识产权归开发者所有。本项目受到著作权法和国际著作权条约以及其他知识产权法律和条约的保护。用户在遵守本声明及相关法律法规的前提下，可以下载和使用本项目。
+## 5. Intellectual Property Statement
+The intellectual property rights of this project belong to the developer. This project is protected by copyright law and international copyright treaties, as well as other intellectual property laws and treaties. Users may download and use this project on the premise of complying with this statement and relevant laws and regulations.
 
-## 6. 最终解释权
-关于本项目的最终解释权归开发者所有。开发者保留随时更改或更新本免责声明的权利，恕不另行通知。
+## 6. Final interpretation right
+The final right of interpretation on this project belongs to the developer. The Developer reserves the right to change or update this disclaimer at any time without prior notice.
 </div>

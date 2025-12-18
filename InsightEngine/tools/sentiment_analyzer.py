@@ -1,7 +1,5 @@
-"""
-多语言情感分析工具
-基于WeiboMultilingualSentiment模型为InsightEngine提供情感分析功能
-"""
+"""Multilingual sentiment analysis tool
+Provide sentiment analysis function for InsightEngine based on WeiboMultilingualSentiment model"""
 
 import os
 import sys
@@ -28,7 +26,7 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 
-# INFO：若想跳过情感分析，可手动切换此开关为False
+# INFO: If you want to skip sentiment analysis, you can manually switch this switch to False
 SENTIMENT_ANALYSIS_ENABLED = True
 
 
@@ -41,7 +39,7 @@ def _describe_missing_dependencies() -> str:
     return " / ".join(missing)
 
 
-# 添加项目根目录到路径，以便导入WeiboMultilingualSentiment
+# Add the project root directory to the path for importing WeiboMultilingualSentiment
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -53,7 +51,7 @@ sys.path.append(weibo_sentiment_path)
 
 @dataclass
 class SentimentResult:
-    """情感分析结果数据类"""
+    """Sentiment analysis result data class"""
 
     text: str
     sentiment_label: str
@@ -66,7 +64,7 @@ class SentimentResult:
 
 @dataclass
 class BatchSentimentResult:
-    """批量情感分析结果数据类"""
+    """Batch sentiment analysis result data class"""
 
     results: List[SentimentResult]
     total_processed: int
@@ -77,13 +75,11 @@ class BatchSentimentResult:
 
 
 class WeiboMultilingualSentimentAnalyzer:
-    """
-    多语言情感分析器
-    封装WeiboMultilingualSentiment模型，为AI Agent提供情感分析功能
-    """
+    """Multilingual Sentiment Analyzer
+    Encapsulate the WeiboMultilingualSentiment model to provide sentiment analysis functions for AI Agents"""
 
     def __init__(self):
-        """初始化情感分析器"""
+        """Initialize sentiment analyzer"""
         self.model = None
         self.tokenizer = None
         self.device = None
@@ -91,20 +87,20 @@ class WeiboMultilingualSentimentAnalyzer:
         self.is_disabled = False
         self.disable_reason: Optional[str] = None
 
-        # 情感标签映射（5级分类）
+        # Sentiment label mapping (5-level classification)
         self.sentiment_map = {
-            0: "非常负面",
-            1: "负面",
-            2: "中性",
-            3: "正面",
-            4: "非常正面",
+            0: "very negative",
+            1: "Negative",
+            2: "neutral",
+            3: "front",
+            4: "Very positive",
         }
 
         if not SENTIMENT_ANALYSIS_ENABLED:
-            self.disable("情感分析功能已在配置中关闭。")
+            self.disable("Sentiment analysis functionality has been turned off in the configuration.")
         elif not (TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE):
-            missing = _describe_missing_dependencies() or "未知依赖"
-            self.disable(f"缺少依赖: {missing}，情感分析已禁用。")
+            missing = _describe_missing_dependencies() or "unknown dependencies"
+            self.disable(f"Missing dependency: {missing}, sentiment analysis is disabled.")
 
         if self.is_disabled:
             reason = self.disable_reason or "Sentiment analysis disabled."
@@ -113,7 +109,7 @@ class WeiboMultilingualSentimentAnalyzer:
             )
         else:
             print(
-                "WeiboMultilingualSentimentAnalyzer 已创建，调用 initialize() 来加载模型"
+                "WeiboMultilingualSentimentAnalyzer has been created and initialize() is called to load the model"
             )
 
     def disable(self, reason: Optional[str] = None, drop_state: bool = False) -> None:
@@ -129,11 +125,11 @@ class WeiboMultilingualSentimentAnalyzer:
     def enable(self) -> bool:
         """Attempt to enable sentiment analysis; returns True if enabled."""
         if not SENTIMENT_ANALYSIS_ENABLED:
-            self.disable("情感分析功能已在配置中关闭。")
+            self.disable("Sentiment analysis functionality has been turned off in the configuration.")
             return False
         if not (TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE):
-            missing = _describe_missing_dependencies() or "未知依赖"
-            self.disable(f"缺少依赖: {missing}，情感分析已禁用。")
+            missing = _describe_missing_dependencies() or "unknown dependencies"
+            self.disable(f"Missing dependency: {missing}, sentiment analysis is disabled.")
             return False
         self.is_disabled = False
         self.disable_reason = None
@@ -156,61 +152,59 @@ class WeiboMultilingualSentimentAnalyzer:
         return torch.device("cpu")
 
     def initialize(self) -> bool:
-        """
-        初始化模型和分词器
+        """Initialize the model and tokenizer
 
         Returns:
-            是否初始化成功
-        """
+            Is initialization successful?"""
         if self.is_disabled:
-            reason = self.disable_reason or "情感分析功能已禁用"
-            print(f"情感分析功能已禁用，跳过模型加载：{reason}")
+            reason = self.disable_reason or "Sentiment analysis feature is disabled"
+            print(f"Sentiment analysis feature disabled, skipping model loading: {reason}")
             return False
 
         if not (TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE):
-            missing = _describe_missing_dependencies() or "未知依赖"
-            self.disable(f"缺少依赖: {missing}，情感分析已禁用。", drop_state=True)
-            print(f"缺少依赖: {missing}，无法加载情感分析模型。")
+            missing = _describe_missing_dependencies() or "unknown dependencies"
+            self.disable(f"Missing dependency: {missing}, sentiment analysis is disabled.", drop_state=True)
+            print(f"Missing dependency: {missing}, unable to load sentiment analysis model.")
             return False
 
         if self.is_initialized:
-            print("模型已经初始化，无需重复加载")
+            print("The model has been initialized and does not need to be loaded again")
             return True
 
         try:
-            print("正在加载多语言情感分析模型...")
+            print("Loading multilingual sentiment analysis model...")
             assert AutoTokenizer is not None
             assert AutoModelForSequenceClassification is not None
 
-            # 使用多语言情感分析模型
+            # Use multilingual sentiment analysis models
             model_name = "tabularisai/multilingual-sentiment-analysis"
             local_model_path = os.path.join(weibo_sentiment_path, "model")
 
-            # 检查本地是否已有模型
+            # Check if the model already exists locally
             if os.path.exists(local_model_path):
-                print("从本地加载模型...")
+                print("Load model from local...")
                 self.tokenizer = AutoTokenizer.from_pretrained(local_model_path)
                 self.model = AutoModelForSequenceClassification.from_pretrained(
                     local_model_path
                 )
             else:
-                print("首次使用，正在下载模型到本地...")
-                # 下载并保存到本地
+                print("First time use, downloading model to local...")
+                # Download and save locally
                 self.tokenizer = AutoTokenizer.from_pretrained(model_name)
                 self.model = AutoModelForSequenceClassification.from_pretrained(
                     model_name
                 )
 
-                # 保存到本地
+                # Save to local
                 os.makedirs(local_model_path, exist_ok=True)
                 self.tokenizer.save_pretrained(local_model_path)
                 self.model.save_pretrained(local_model_path)
-                print(f"模型已保存到: {local_model_path}")
+                print(f"Model saved to: {local_model_path}")
 
-            # 设置设备
+            # Set up the device
             device = self._select_device()
             if device is None:
-                raise RuntimeError("未检测到可用的计算设备")
+                raise RuntimeError("No available computing device detected")
 
             self.device = device
             self.model.to(self.device)
@@ -220,92 +214,88 @@ class WeiboMultilingualSentimentAnalyzer:
 
             device_type = getattr(self.device, "type", str(self.device))
             if device_type == "cuda":
-                print("检测到可用 GPU，已优先使用 CUDA 进行推理。")
+                print("Available GPU detected, CUDA has been prioritized for inference.")
             elif device_type == "mps":
-                print("检测到 Apple MPS 设备，已使用 MPS 进行推理。")
+                print("Apple MPS device detected, MPS used for inference.")
             else:
-                print("未检测到 GPU，自动使用 CPU 进行推理。")
+                print("GPU not detected, automatically uses CPU for inference.")
 
-            print(f"模型加载成功! 使用设备: {self.device}")
-            print("支持语言: 中文、英文、西班牙文、阿拉伯文、日文、韩文等22种语言")
-            print("情感等级: 非常负面、负面、中性、正面、非常正面")
+            print(f"Model loaded successfully! Device used: {self.device}")
+            print("Supported languages: 22 languages ​​including Chinese, English, Spanish, Arabic, Japanese, and Korean")
+            print("Sentiment scale: very negative, negative, neutral, positive, very positive")
 
             return True
 
         except Exception as e:
-            error_message = f"模型加载失败: {e}"
+            error_message = f"Model loading failed: {e}"
             print(error_message)
-            print("请检查网络连接或模型文件")
+            print("Please check network connection or model file")
             self.disable(error_message, drop_state=True)
             return False
 
     def _preprocess_text(self, text: str) -> str:
-        """
-        文本预处理
+        """Text preprocessing
 
         Args:
-            text: 输入文本
+            text: input text
 
         Returns:
-            处理后的文本
-        """
-        # 基本文本清理
+            processed text"""
+        # Basic text cleaning
         if not text or not text.strip():
             return ""
 
-        # 去除多余空格
+        # Remove extra spaces
         text = re.sub(r"\s+", " ", text.strip())
 
         return text
 
     def analyze_single_text(self, text: str) -> SentimentResult:
-        """
-        对单个文本进行情感分析
+        """Perform sentiment analysis on individual texts
 
         Args:
-            text: 要分析的文本
+            text: the text to analyze
 
         Returns:
-            SentimentResult对象
-        """
+            SentimentResult object"""
         if self.is_disabled:
             return SentimentResult(
                 text=text,
-                sentiment_label="情感分析未执行",
+                sentiment_label="Sentiment analysis not performed",
                 confidence=0.0,
                 probability_distribution={},
                 success=False,
-                error_message=self.disable_reason or "情感分析功能已禁用",
+                error_message=self.disable_reason or "Sentiment analysis feature is disabled",
                 analysis_performed=False,
             )
 
         if not self.is_initialized:
             return SentimentResult(
                 text=text,
-                sentiment_label="未初始化",
+                sentiment_label="not initialized",
                 confidence=0.0,
                 probability_distribution={},
                 success=False,
-                error_message="模型未初始化，请先调用initialize() 方法",
+                error_message="The model is not initialized, please call the initialize() method first",
                 analysis_performed=False,
             )
 
         try:
-            # 预处理文本
+            # Preprocess text
             processed_text = self._preprocess_text(text)
 
             if not processed_text:
                 return SentimentResult(
                     text=text,
-                    sentiment_label="输入错误",
+                    sentiment_label="Input error",
                     confidence=0.0,
                     probability_distribution={},
                     success=False,
-                    error_message="输入文本为空或无效内容",
+                    error_message="The input text is empty or has invalid content",
                     analysis_performed=False,
                 )
             assert self.tokenizer is not None
-            # 分词编码
+            # word segmentation coding
             inputs = self.tokenizer(
                 processed_text,
                 max_length=512,
@@ -314,10 +304,10 @@ class WeiboMultilingualSentimentAnalyzer:
                 return_tensors="pt",
             )
 
-            # 转移到设备
+            # Transfer to device
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-            # 预测
+            # predict
             assert torch is not None
             assert self.model is not None
             with torch.no_grad():
@@ -326,11 +316,11 @@ class WeiboMultilingualSentimentAnalyzer:
                 probabilities = torch.softmax(logits, dim=1)
                 prediction = int(torch.argmax(probabilities, dim=1).item())
 
-            # 构建结果
+            # Build results
             confidence = probabilities[0][prediction].item()
             label = self.sentiment_map[prediction]
 
-            # 构建概率分布字典
+            # Build probability distribution dictionary
             prob_dist = {}
             for label_name, prob in zip(self.sentiment_map.values(), probabilities[0]):
                 prob_dist[label_name] = prob.item()
@@ -346,27 +336,25 @@ class WeiboMultilingualSentimentAnalyzer:
         except Exception as e:
             return SentimentResult(
                 text=text,
-                sentiment_label="分析失败",
+                sentiment_label="Analysis failed",
                 confidence=0.0,
                 probability_distribution={},
                 success=False,
-                error_message=f"预测时发生错误: {str(e)}",
+                error_message=f"An error occurred while predicting: {str(e)}",
                 analysis_performed=False,
             )
 
     def analyze_batch(
         self, texts: List[str], show_progress: bool = True
     ) -> BatchSentimentResult:
-        """
-        批量情感分析
+        """Batch sentiment analysis
 
         Args:
-            texts: 文本列表
-            show_progress: 是否显示进度
+            texts: text list
+            show_progress: whether to show progress
 
         Returns:
-            BatchSentimentResult对象
-        """
+            BatchSentimentResult object"""
         if not texts:
             return BatchSentimentResult(
                 results=[],
@@ -381,11 +369,11 @@ class WeiboMultilingualSentimentAnalyzer:
             passthrough_results = [
                 SentimentResult(
                     text=text,
-                    sentiment_label="情感分析未执行",
+                    sentiment_label="Sentiment analysis not performed",
                     confidence=0.0,
                     probability_distribution={},
                     success=False,
-                    error_message=self.disable_reason or "情感分析功能不可用",
+                    error_message=self.disable_reason or "Sentiment analysis function is not available",
                     analysis_performed=False,
                 )
                 for text in texts
@@ -405,7 +393,7 @@ class WeiboMultilingualSentimentAnalyzer:
 
         for i, text in enumerate(texts):
             if show_progress and len(texts) > 1:
-                print(f"处理进度: {i + 1}/{len(texts)}")
+                print(f"Processing progress: {i + 1}/{len(texts)}")
 
             result = self.analyze_single_text(text)
             results.append(result)
@@ -435,9 +423,7 @@ class WeiboMultilingualSentimentAnalyzer:
         texts: Optional[List[str]] = None,
         results: Optional[List[SentimentResult]] = None,
     ) -> Dict[str, Any]:
-        """
-        构建在情感分析不可用时的透传结果
-        """
+        """Build pass-through results when sentiment analysis is not available"""
         total_items = len(texts) if texts is not None else len(original_data)
         response: Dict[str, Any] = {
             "sentiment_analysis": {
@@ -448,7 +434,7 @@ class WeiboMultilingualSentimentAnalyzer:
                 "average_confidence": 0.0,
                 "sentiment_distribution": {},
                 "high_confidence_results": [],
-                "summary": f"情感分析未执行：{reason}",
+                "summary": f"Sentiment analysis not performed: {reason}",
                 "original_texts": original_data,
             }
         }
@@ -470,34 +456,31 @@ class WeiboMultilingualSentimentAnalyzer:
         text_field: str = "content",
         min_confidence: float = 0.5,
     ) -> Dict[str, Any]:
-        """
-        对查询结果进行情感分析
-        专门用于分析从MediaCrawlerDB返回的查询结果
+        """Perform sentiment analysis on query results
+        Specifically used to analyze query results returned from MediaCrawlerDB
 
         Args:
-            query_results: 查询结果列表，每个元素包含文本内容
-            text_field: 文本内容字段名，默认为"content"
-            min_confidence: 最小置信度阈值
+            query_results: Query results list, each element contains text content
+            text_field: text content field name, default is"content"min_confidence: minimum confidence threshold
 
         Returns:
-            包含情感分析结果的字典
-        """
+            Dictionary containing sentiment analysis results"""
         if not query_results:
             return {
                 "sentiment_analysis": {
                     "total_analyzed": 0,
                     "sentiment_distribution": {},
                     "high_confidence_results": [],
-                    "summary": "没有内容需要分析",
+                    "summary": "There is no content to analyze",
                 }
             }
 
-        # 提取文本内容
+        # Extract text content
         texts_to_analyze = []
         original_data = []
 
         for item in query_results:
-            # 尝试多个可能的文本字段
+            # Try multiple possible text fields
             text_content = ""
             for field in [text_field, "title_or_content", "content", "title", "text"]:
                 if field in item and item[field]:
@@ -514,23 +497,23 @@ class WeiboMultilingualSentimentAnalyzer:
                     "total_analyzed": 0,
                     "sentiment_distribution": {},
                     "high_confidence_results": [],
-                    "summary": "查询结果中没有找到可分析的文本内容",
+                    "summary": "No analyzable text content was found in the query results.",
                 }
             }
 
         if self.is_disabled:
             return self._build_passthrough_analysis(
                 original_data=original_data,
-                reason=self.disable_reason or "情感分析模型不可用",
+                reason=self.disable_reason or "Sentiment analysis model is not available",
                 texts=texts_to_analyze,
             )
 
-        # 执行批量情感分析
-        print(f"正在对{len(texts_to_analyze)}条内容进行情感分析...")
+        # Perform batch sentiment analysis
+        print(f"Sentiment analysis is being performed on {len(texts_to_analyze)} pieces of content...")
         batch_result = self.analyze_batch(texts_to_analyze, show_progress=True)
 
         if not batch_result.analysis_performed:
-            reason = self.disable_reason or "情感分析功能不可用"
+            reason = self.disable_reason or "Sentiment analysis function is not available"
             if batch_result.results:
                 candidate_error = next(
                     (r.error_message for r in batch_result.results if r.error_message),
@@ -545,19 +528,19 @@ class WeiboMultilingualSentimentAnalyzer:
                 results=batch_result.results,
             )
 
-        # 统计情感分布
+        # Statistical sentiment distribution
         sentiment_distribution = {}
         high_confidence_results = []
 
         for result, original_item in zip(batch_result.results, original_data):
             if result.success:
-                # 统计情感分布
+                # Statistical sentiment distribution
                 sentiment = result.sentiment_label
                 if sentiment not in sentiment_distribution:
                     sentiment_distribution[sentiment] = 0
                 sentiment_distribution[sentiment] += 1
 
-                # 收集高置信度结果
+                # Collect high-confidence results
                 if result.confidence >= min_confidence:
                     high_confidence_results.append(
                         {
@@ -570,13 +553,13 @@ class WeiboMultilingualSentimentAnalyzer:
                         }
                     )
 
-        # 生成情感分析摘要
+        # Generate sentiment analysis summaries
         total_analyzed = batch_result.success_count
         if total_analyzed > 0:
             dominant_sentiment = max(sentiment_distribution.items(), key=lambda x: x[1])
-            sentiment_summary = f"共分析{total_analyzed}条内容，主要情感倾向为'{dominant_sentiment[0]}'({dominant_sentiment[1]}条，占{dominant_sentiment[1] / total_analyzed * 100:.1f}%)"
+            sentiment_summary = f"A total of {total_analyzed} pieces of content were analyzed, and the main emotional tendency is '{dominant_sentiment[0]}' ({dominant_sentiment[1]}, accounting for {dominant_sentiment[1] / total_analyzed * 100:.1f}%)"
         else:
-            sentiment_summary = "情感分析失败"
+            sentiment_summary = "Sentiment analysis failed"
 
         return {
             "sentiment_analysis": {
@@ -584,51 +567,49 @@ class WeiboMultilingualSentimentAnalyzer:
                 "success_rate": f"{batch_result.success_count}/{batch_result.total_processed}",
                 "average_confidence": round(batch_result.average_confidence, 4),
                 "sentiment_distribution": sentiment_distribution,
-                "high_confidence_results": high_confidence_results,  # 返回所有高置信度结果，不做限制
+                "high_confidence_results": high_confidence_results,  # Return all high-confidence results without restrictions
                 "summary": sentiment_summary,
             }
         }
 
     def get_model_info(self) -> Dict[str, Any]:
-        """
-        获取模型信息
+        """Get model information
 
         Returns:
-            模型信息字典
-        """
+            Model information dictionary"""
         return {
             "model_name": "tabularisai/multilingual-sentiment-analysis",
             "supported_languages": [
-                "中文",
-                "英文",
-                "西班牙文",
-                "阿拉伯文",
-                "日文",
-                "韩文",
-                "德文",
-                "法文",
-                "意大利文",
-                "葡萄牙文",
-                "俄文",
-                "荷兰文",
-                "波兰文",
-                "土耳其文",
-                "丹麦文",
-                "希腊文",
-                "芬兰文",
-                "瑞典文",
-                "挪威文",
-                "匈牙利文",
-                "捷克文",
-                "保加利亚文",
+                "Chinese",
+                "English",
+                "spanish",
+                "Arabic",
+                "Japanese",
+                "Korean",
+                "German",
+                "French",
+                "Italian",
+                "portuguese",
+                "Russian",
+                "Dutch",
+                "polish",
+                "turkish",
+                "danish",
+                "greek",
+                "Finnish",
+                "Swedish",
+                "norwegian",
+                "Hungarian",
+                "Czech",
+                "Bulgarian",
             ],
             "sentiment_levels": list(self.sentiment_map.values()),
             "is_initialized": self.is_initialized,
-            "device": str(self.device) if self.device else "未设置",
+            "device": str(self.device) if self.device else "not set",
         }
 
 
-# 创建全局实例（延迟初始化）
+# Create a global instance (lazy initialization)
 multilingual_sentiment_analyzer = WeiboMultilingualSentimentAnalyzer()
 
 
@@ -647,16 +628,14 @@ def disable_sentiment_analysis(
 def analyze_sentiment(
     text_or_texts: Union[str, List[str]], initialize_if_needed: bool = True
 ) -> Union[SentimentResult, BatchSentimentResult]:
-    """
-    便捷的情感分析函数
+    """Convenient sentiment analysis function
 
     Args:
-        text_or_texts: 单个文本或文本列表
-        initialize_if_needed: 如果模型未初始化，是否自动初始化
+        text_or_texts: single text or text list
+        initialize_if_needed: If the model is not initialized, whether to automatically initialize it
 
     Returns:
-        SentimentResult或BatchSentimentResult
-    """
+        SentimentResult or BatchSentimentResult"""
     if (
         initialize_if_needed
         and not multilingual_sentiment_analyzer.is_initialized
@@ -672,27 +651,27 @@ def analyze_sentiment(
 
 
 if __name__ == "__main__":
-    # 测试代码
+    # test code
     analyzer = WeiboMultilingualSentimentAnalyzer()
 
     if analyzer.initialize():
-        # 测试单个文本
-        result = analyzer.analyze_single_text("今天天气真好，心情特别棒！")
+        # Test a single text
+        result = analyzer.analyze_single_text("The weather is so nice today, and I’m in a great mood!")
         print(
-            f"单个文本分析: {result.sentiment_label} (置信度: {result.confidence:.4f})"
+            f"Single text analysis: {result.sentiment_label} (Confidence: {result.confidence:.4f})"
         )
 
-        # 测试批量文本
+        # Test batch text
         test_texts = [
-            "这家餐厅的菜味道非常棒！",
-            "服务态度太差了，很失望",
+            "The food at this restaurant tastes great!",
+            "The service attitude is so bad, I am very disappointed",
             "I absolutely love this product!",
             "The customer service was disappointing.",
         ]
 
         batch_result = analyzer.analyze_batch(test_texts)
         print(
-            f"\n批量分析: 成功 {batch_result.success_count}/{batch_result.total_processed}"
+            f"\nBatch analysis: Success {batch_result.success_count}/{batch_result.total_processed}"
         )
 
         for result in batch_result.results:
@@ -700,4 +679,4 @@ if __name__ == "__main__":
                 f"'{result.text[:30]}...' -> {result.sentiment_label} ({result.confidence:.4f})"
             )
     else:
-        print("模型初始化失败，无法进行测试")
+        print("Model initialization failed and cannot be tested")

@@ -19,7 +19,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Build-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/)
 
 
-[English](./README-EN.md) | [中文文档](./README.md)
+[English](./README-EN.md) | [Chinese Document](./README.md)
 
 </div>
 
@@ -187,7 +187,7 @@ BettaFish/
 │   │   ├── chart_validator.py              # Chart validation tool
 │   │   └── chart_repair_api.py             # Chart repair API
 │   ├── report_template/                    # Markdown template library
-│   │   ├── 企业品牌声誉分析报告.md
+│ │ ├── Corporate Brand Reputation Analysis Report.md
 │   │   └── ...
 │   └── __init__.py
 ├── ForumEngine/                            # Forum engine: Agent collaboration mechanism

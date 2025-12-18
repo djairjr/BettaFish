@@ -1,7 +1,5 @@
-"""
-Deep Search Agent
-一个无框架的深度搜索AI代理实现
-"""
+"""Deep Search Agent
+A framework-less deep search AI agent implementation"""
 
 from .agent import DeepSearchAgent, AnspireSearchAgent, create_agent
 from .utils.config import Settings

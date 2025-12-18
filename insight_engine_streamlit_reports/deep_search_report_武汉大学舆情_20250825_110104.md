@@ -1,89 +1,89 @@
-# 珞珈山舆情风暴全景报告  
-**——当樱花滤镜碎裂，谁来守护6万人的“白月光”？**
+#Luojia Mountain Public Opinion Storm Panoramic Report
+**——When the cherry blossom filter breaks, who will protect the "White Moonlight" of 60,000 people? **
 
 ---
 
-## 一、事件全景速览：从樱花到宿舍，舆情为何连环爆？
+## 1. A quick overview of the incident: From cherry blossoms to dormitories, why did public opinion explode continuously?
 
-| 时间轴 | 爆点事件 | 48小时最高阅读量 | 核心情绪关键词 |
+| Timeline | Breaking events | Highest reading volume in 48 hours | Core emotional keywords |
 | --- | --- | --- | --- |
-| 3月中旬 | 樱花预约系统崩溃 | **4800万** (#武大不配拥有樱花#) | **崩溃、陪跑、脚本党** |
-| 4月初 | 研一宿舍“连夜搬家” | 1.2亿 (抖音热搜) | **愤怒、心疼、突然连根拔起** |
-| 5月中 | 校友捐建“樱花城堡”引跑道缩水争议 | 10万转发 (夜跑贴) | **感恩与焦虑并存** |
-| 7月末 | 图书馆性骚扰案判决+衍生舆情 | 4.2亿 | **绝望、羞耻、毕业证贬值** |
+| Mid-March | Sakura reservation system crashes | **48 million** (#武大不worthy to have cherry blossoms#) | **Crash, accompanying, script party** |
+| Early April | Graduate dormitory "moved overnight" | 120 million (TikTok hot search) | **Angry, distressed, suddenly uprooted** |
+| Mid-May | Alumni donated money to build the "Sakura Castle", sparking controversy over runway shrinkage | 100,000 retweets (night running post) | **Gratitude and anxiety coexist** |
+| End of July | Library sexual harassment case verdict + derived public opinion | 420 million | **Despair, shame, devaluation of diploma** |
 
-> **共同特征**：每一次爆点，都先击中“在校生日常痛点”，再由校外舆论场放大成“985声誉危机”。
+> **Common Features**: Every explosive point first hits the "daily pain points of school students", and then amplifies into the "985 reputation crisis" from the public opinion field outside the school.
 
 ---
 
-## 二、传播链路与情绪裂变
+## 2. Communication links and emotional fission
 
-### 1. 平台情绪雷达
+### 1. Platform emotion radar
 
-| 平台 | 主导情绪 | 代表性弹幕/评论 | 二次创作 |
+| Platform | Dominant emotion | Representative barrages/comments | Secondary creation |
 | --- | --- | --- | --- |
-| **B站** | **破防、自嘲** | “985废物抱团取暖” | 鬼畜《莞莞类卿》播放量破百万 |
-| **微博** | **愤怒+恐慌** | “简历已加WHU关键字过滤” | 热搜#武大仍在等上级# 3.8亿阅读 |
-| **知乎** | **绝望、学术焦虑** | “读博第三年，第一次想退学” | “24小时校长自救指南”4.7万赞 |
-| **小红书** | **家长焦虑** | “抱着娃在樱花门口吹冷风” | 《樱花季劝退帖》转爆家长群 |
-| **抖音** | **愤怒** | “年年崩，年年不改” | 黑白滤镜“最美校园蒙尘”40万转 |
+| **Station B** | **Broken defenses, self-deprecating** | "985 wastes huddle together to keep warm" | The ghost beast "Wanwan Leiqing" has been played over one million times |
+| **Weibo** | **Angry + Panic** | "The resume has been filtered with WHU keywords" | Hot search #武大stillwaitingforsuperior# 380 million reads |
+| **Zhihu** | **Despair, academic anxiety** | "In the third year of my Ph.D., I want to drop out for the first time" | "24-hour Principal's Self-Help Guide" 47,000 likes |
+| **Little Red Book** | **Parent Anxiety** | "Holding the baby and blowing the cold wind at the door of the cherry blossoms" | "The post to persuade students to quit during the cherry blossom season" went viral in parent groups |
+| **Douyin** | **Angry** | "Collapse every year, never change" | Black and white filter "The most beautiful campus is covered in dust" 400,000 retweets |
 
-### 2. 情绪传导公式  
-> **校内小事 → 学生自嘲/吐槽 → 校外共鸣 → 标签化（985滤镜碎裂）→ 就业、招生等宏大焦虑 → 官方沉默放大伤害**
+### 2. Emotional transmission formula
+> **Little things inside school → Students laugh at themselves/complain → Resonance outside school → Labeling (985 filter shattered) → Grand anxieties such as employment and enrollment → Official silence magnifies harm**
 
 ---
 
-## 三、校方回应评估：12分的“冰雕公关”
+## 3. The school’s response evaluation: 12 points for “Ice Sculpture Public Relations”
 
-| 维度 | 表现 | 负面对比案例 |
+| Dimensions | Performance | Negative comparison cases |
 | --- | --- | --- |
-| **响应速度** | 48小时“正在处理，需等上级” | 华东某高校24小时撤销处分 |
-| **措辞温度** | “技术性中立”被嘲“冰雕回应” | 他校“启动国家赔偿” |
-| **补救动作** | 仅发3条风景微博，评论区追问6万条 | 同期他校开通“校长热线” |
-| **次生舆情** | 校长“像北大”被剪鬼畜；热搜#谁来为爷爷守灵#被降权 | —— |
+| **Response speed** | 48 hours "under processing, need to wait for superiors" | A university in East China revoked the punishment within 24 hours |
+| **Wording temperature** | "Technical neutrality" was ridiculed as "ice sculpture response" | Other schools "initiated state compensation" |
+| **Remedial Actions** | Only 3 scenic Weibo posts were posted, and 60,000 questions were asked in the comment area | At the same time, other schools opened a "principal hotline" |
+| **Secondary Public Opinion** | The principal "looks like Peking University" was cut off as a ghost; the hot search #who will watch for grandpa# was demoted | —— |
 
-> **结论**：在“司法已判、舆情未平”的关键节点，沉默=二次伤害。
+> **Conclusion**: At the critical juncture of "the judicial decision has been made but public opinion has not been settled", silence = secondary harm.
 
 ---
 
-## 四、多元群体诉求清单
+## 4. List of demands of diverse groups
 
-| 群体 | 高频诉求 | 金句 |
+| Groups | High-frequency appeals | Phrases |
 | --- | --- | --- |
-| 本科生 | **修Wi-Fi、降网费** | “连上算我输” |
-| 硕博生 | **恢复数据库、VPN** | “一篇论文淘宝代查20块” |
-| 校友 | **物价透明、记忆守护** | “1998年热干面8毛，现在5块5” |
-| 家长 | **招生季别再翻车** | “通知书别变月光宝盒” |
-| 全体学生 | **前置沟通、月度对话** | “我们想要的不只是网速，是敢安心学习的校园” |
+| Undergraduate students | **Fix Wi-Fi and reduce Internet fees** | "I lose even if I win" |
+| Master and PhD student | **Restore database, VPN** | "Taobao search for a paper costs 20 yuan" |
+| Alumni | **Price transparency, memory protection** | "In 1998, hot dry noodles cost 8 yuan, now they cost 5 yuan." |
+| Parents | **Don’t make mistakes during the admissions season** | “Don’t turn your notice into a moonlight treasure box” |
+| All students | **Pre-communication, monthly dialogue** | "What we want is not just internet speed, but a campus where we can study with peace of mind" |
 
 ---
 
-## 五、风险预警与优化建议
+## 5. Risk warning and optimization suggestions
 
-### 1. 高风险三色灯
+### 1. High risk tri-color lights
 
-| 信号灯 | 爆点预测 | 触发阈值 | 提前干预 |
+| Signal light | Explosion point prediction | Trigger threshold | Early intervention |
 | --- | --- | --- | --- |
-| 🔴 红灯 | 4月复试+樱花节系统三流叠加 | 预约系统崩溃>30分钟 | ①提前扩容3倍 ②学生志愿者现场引流 ③失败即开线下“道歉+补偿”通道 |
-| 🟡 黄灯 | 5月“行李寄送价涨三倍”旧闻回锅 | 抖音点赞>50万 | ①提前与快递签限价协议 ②公布往年价格对比表 |
-| 🟢 绿灯 | 6月招生片滤镜过度 | B站弹幕“诈骗式招生”>10% | ①实景直播探校 ②评论区实时答疑 |
+| 🔴 Red light | April retest + Cherry Blossom Festival system three-stream superposition | Reservation system crashes >30 minutes | ① Expand capacity 3 times in advance ② Student volunteers on-site drainage ③ Open offline "apology + compensation" channel upon failure |
+| 🟡 Yellow light | Old news that "baggage shipping prices tripled" in May has been revived | Douyin likes > 500,000 | ① Sign a price limit agreement with express delivery in advance ② Publish the price comparison table of previous years |
+| 🟢 Green light | Over-filtered June admissions video | Bilibili barrage "fraudulent admissions" >10% | ①Live broadcast to visit the school ②Real-time Q&A in the comment area |
 
-### 2. 舆情管理“3-30-3”原则  
-- **3分钟**：一级关键词（宿舍/预约/崩溃）情感值跌破-0.3，系统自动告警  
-- **30分钟**：跨部门（信息中心、学工、后勤、宣传）联席回应，首条声明发出  
-- **3小时**：给出可落地的改进时间表，同步上线“学生监督群”实时播报进度
+### 2. “3-30-3” principle of public opinion management
+- **3 minutes**: The emotional value of the first-level keywords (dormitory/reservation/crash) falls below -0.3, and the system automatically alarms
+- **30 minutes**: Cross-department (information center, students and workers, logistics, publicity) joint response, the first statement is issued
+- **3 hours**: Provide a timetable for improvements that can be implemented, and simultaneously launch the "Student Supervision Group" to report the progress in real time
 
-### 3. 长效沟通机制  
-- **每月最后一个周五**：线下“校领导午餐会”，学生扫码报名，现场直播  
-- **“珞珈回音壁”小程序**：24小时收集诉求，48小时公开答复率≥80%  
-- **校友-在校生联席会**：毕业季、招生季前各一次，提前对冲情绪
+### 3. Long-term communication mechanism
+- **Last Friday of every month**: Offline "School Leaders Luncheon", students scan the QR code to sign up, live broadcast
+- **"Luojia Echo Wall" mini program**: 24 hours to collect appeals, 48 ​​hours public response rate ≥80%
+- **Alumni-Current Student Joint Meeting**: Once before graduation season and admissions season, to hedge emotions in advance
 
 ---
 
-## 六、结语：别让樱花成为唯一的滤镜
+## 6. Conclusion: Don’t let cherry blossoms become the only filter
 
-当6万在校师生被推上舆论砧板，每一次“小事”爆发都在追问同一个问题：  
-> **“我们到底是在守护一所大学，还是在守护一张985标签？”**
+When 60,000 school teachers and students are put on the chopping block of public opinion, every time a "little incident" breaks out, the same question is asked:
+> **"Are we protecting a university, or are we protecting a 985 label?"**
 
-樱花年年盛放，可真正让珞珈山发光的，不是花瓣，而是**敢于直面问题的勇气**。  
-把回应做在前面，把对话落在实处，才能让学生安心读书、校友自豪回忆、家长放心把孩子交给这座山。
+Cherry blossoms bloom every year, but what really makes Luojia Mountain shine is not the petals, but the courage to face problems head-on.
+Only by putting the response first and implementing the dialogue can students study with peace of mind, alumni remember with pride, and parents trust their children with this mountain.

@@ -1,12 +1,12 @@
-# 声明：本代码仅供学习和研究目的使用。使用者应遵守以下原则：
-# 1. 不得用于任何商业用途。
-# 2. 使用时应遵守目标平台的使用条款和robots.txt规则。
-# 3. 不得进行大规模爬取或对平台造成运营干扰。
-# 4. 应合理控制请求频率，避免给目标平台带来不必要的负担。
-# 5. 不得用于任何非法或不当的用途。
+# Disclaimer: This code is for learning and research purposes only. Users should abide by the following principles:
+# 1. Not for any commercial purposes.
+# 2. When using, you should comply with the terms of use and robots.txt rules of the target platform.
+# 3. Do not conduct large-scale crawling or cause operational interference to the platform.
+# 4. The request frequency should be reasonably controlled to avoid unnecessary burden on the target platform.
+# 5. May not be used for any illegal or inappropriate purposes.
 #
-# 详细许可条款请参阅项目根目录下的LICENSE文件。
-# 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
+# For detailed license terms, please refer to the LICENSE file in the project root directory.
+# By using this code, you agree to abide by the above principles and all terms in LICENSE.
 
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ EnumT = TypeVar("EnumT", bound=Enum)
 
 
 class PlatformEnum(str, Enum):
-    """支持的媒体平台枚举"""
+    """Enumeration of supported media platforms"""
 
     XHS = "xhs"
     DOUYIN = "dy"
@@ -40,7 +40,7 @@ class PlatformEnum(str, Enum):
 
 
 class LoginTypeEnum(str, Enum):
-    """登录方式枚举"""
+    """Login method enumeration"""
 
     QRCODE = "qrcode"
     PHONE = "phone"
@@ -48,7 +48,7 @@ class LoginTypeEnum(str, Enum):
 
 
 class CrawlerTypeEnum(str, Enum):
-    """爬虫类型枚举"""
+    """Crawler type enum"""
 
     SEARCH = "search"
     DETAIL = "detail"
@@ -56,7 +56,7 @@ class CrawlerTypeEnum(str, Enum):
 
 
 class SaveDataOptionEnum(str, Enum):
-    """数据保存方式枚举"""
+    """Data storage method enumeration"""
 
     CSV = "csv"
     DB = "db"
@@ -66,7 +66,7 @@ class SaveDataOptionEnum(str, Enum):
 
 
 class InitDbOptionEnum(str, Enum):
-    """数据库初始化选项"""
+    """Database initialization options"""
 
     SQLITE = "sqlite"
     MYSQL = "mysql"
@@ -93,7 +93,7 @@ def _coerce_enum(
         return enum_cls(value)
     except ValueError:
         typer.secho(
-            f"⚠️ 配置值 '{value}' 不在 {enum_cls.__name__} 支持的范围内，已回退到默认值 '{default.value}'.",
+            f"⚠️ The configuration value '{value}' is not within the range supported by {enum_cls.__name__} and has fallen back to the default value '{default.value}'.",
             fg=typer.colors.YELLOW,
         )
         return default
@@ -124,7 +124,7 @@ def _inject_init_db_default(args: Sequence[str]) -> list[str]:
 
 
 async def parse_cmd(argv: Optional[Sequence[str]] = None):
-    """使用 Typer 解析命令行参数。"""
+    """Use Typer to parse command line arguments."""
 
     app = typer.Typer(add_completion=False)
 
@@ -134,48 +134,48 @@ async def parse_cmd(argv: Optional[Sequence[str]] = None):
             PlatformEnum,
             typer.Option(
                 "--platform",
-                help="媒体平台选择 (xhs=小红书 | dy=抖音 | ks=快手 | bili=哔哩哔哩 | wb=微博 | tieba=百度贴吧 | zhihu=知乎)",
-                rich_help_panel="基础配置",
+                help="Media platform selection (xhs=Little Red Book | dy=Douyin | ks=Kuaishou | bili=Bilibili | wb=Weibo | tieba=Baidu Tieba | zhihu=Zhihu)",
+                rich_help_panel="Basic configuration",
             ),
         ] = _coerce_enum(PlatformEnum, config.PLATFORM, PlatformEnum.XHS),
         lt: Annotated[
             LoginTypeEnum,
             typer.Option(
                 "--lt",
-                help="登录方式 (qrcode=二维码 | phone=手机号 | cookie=Cookie)",
-                rich_help_panel="账号配置",
+                help="Login method (qrcode=QR code | phone=mobile phone number | cookie=Cookie)",
+                rich_help_panel="Account configuration",
             ),
         ] = _coerce_enum(LoginTypeEnum, config.LOGIN_TYPE, LoginTypeEnum.QRCODE),
         crawler_type: Annotated[
             CrawlerTypeEnum,
             typer.Option(
                 "--type",
-                help="爬取类型 (search=搜索 | detail=详情 | creator=创作者)",
-                rich_help_panel="基础配置",
+                help="Crawling type (search=search | detail=details | creator=creator)",
+                rich_help_panel="Basic configuration",
             ),
         ] = _coerce_enum(CrawlerTypeEnum, config.CRAWLER_TYPE, CrawlerTypeEnum.SEARCH),
         start: Annotated[
             int,
             typer.Option(
                 "--start",
-                help="起始页码",
-                rich_help_panel="基础配置",
+                help="Starting page number",
+                rich_help_panel="Basic configuration",
             ),
         ] = config.START_PAGE,
         keywords: Annotated[
             str,
             typer.Option(
                 "--keywords",
-                help="请输入关键词，多个关键词用逗号分隔",
-                rich_help_panel="基础配置",
+                help="Please enter keywords, separate multiple keywords with commas",
+                rich_help_panel="Basic configuration",
             ),
         ] = config.KEYWORDS,
         get_comment: Annotated[
             str,
             typer.Option(
                 "--get_comment",
-                help="是否爬取一级评论，支持 yes/true/t/y/1 或 no/false/f/n/0",
-                rich_help_panel="评论配置",
+                help="Whether to crawl first-level comments, supports yes/true/t/y/1 or no/false/f/n/0",
+                rich_help_panel="Comment configuration",
                 show_default=True,
             ),
         ] = str(config.ENABLE_GET_COMMENTS),
@@ -183,8 +183,8 @@ async def parse_cmd(argv: Optional[Sequence[str]] = None):
             str,
             typer.Option(
                 "--get_sub_comment",
-                help="是否爬取二级评论，支持 yes/true/t/y/1 或 no/false/f/n/0",
-                rich_help_panel="评论配置",
+                help="Whether to crawl secondary comments, supports yes/true/t/y/1 or no/false/f/n/0",
+                rich_help_panel="Comment configuration",
                 show_default=True,
             ),
         ] = str(config.ENABLE_GET_SUB_COMMENTS),
@@ -192,8 +192,8 @@ async def parse_cmd(argv: Optional[Sequence[str]] = None):
             SaveDataOptionEnum,
             typer.Option(
                 "--save_data_option",
-                help="数据保存方式 (csv=CSV文件 | db=MySQL数据库 | json=JSON文件 | sqlite=SQLite数据库 | postgresql=PostgreSQL数据库)",
-                rich_help_panel="存储配置",
+                help="Data storage method (csv=CSV file | db=MySQL database | json=JSON file | sqlite=SQLite database | postgresql=PostgreSQL database)",
+                rich_help_panel="Storage configuration",
             ),
         ] = _coerce_enum(
             SaveDataOptionEnum, config.SAVE_DATA_OPTION, SaveDataOptionEnum.JSON
@@ -202,20 +202,20 @@ async def parse_cmd(argv: Optional[Sequence[str]] = None):
             Optional[InitDbOptionEnum],
             typer.Option(
                 "--init_db",
-                help="初始化数据库表结构 (sqlite | mysql | postgresql)",
-                rich_help_panel="存储配置",
+                help="Initialize database table structure (sqlite | mysql | postgresql)",
+                rich_help_panel="Storage configuration",
             ),
         ] = None,
         cookies: Annotated[
             str,
             typer.Option(
                 "--cookies",
-                help="Cookie 登录方式使用的 Cookie 值",
-                rich_help_panel="账号配置",
+                help="Cookie value used by cookie login method",
+                rich_help_panel="Account configuration",
             ),
         ] = config.COOKIES,
     ) -> SimpleNamespace:
-        """MediaCrawler 命令行入口"""
+        """MediaCrawler command line entry"""
 
         enable_comment = _to_bool(get_comment)
         enable_sub_comment = _to_bool(get_sub_comment)
